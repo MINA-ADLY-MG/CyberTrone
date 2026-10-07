@@ -1,0 +1,3755 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>يوم CYBERTRON | سايبرترون — جاهز للتحديات</title>
+  
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&family=Tajawal:wght@500;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- CDN Libraries (Pinned Three.js r128 + EffectComposer Passes + GSAP + Supabase) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ==========================================================================
+       CYBERTRON AAA GAME HUD STYLESHEET
+       ========================================================================== */
+    :root {
+      --charcoal: #0a0d12;
+      --steel: #1b2230;
+      --gunmetal: #121824;
+      --metal-border: #2c384e;
+      --cyan: #27c4ff;
+      --cyan-glow: rgba(39, 196, 255, 0.6);
+      --orange: #ff7a1a;
+      --orange-glow: rgba(255, 122, 26, 0.6);
+      --red: #e0262f;
+      --red-glow: rgba(224, 38, 47, 0.6);
+      --purple: #8a3dff;
+      --purple-glow: rgba(138, 61, 255, 0.6);
+      --gold: #f2b632;
+      --gold-glow: rgba(242, 182, 50, 0.6);
+      --ice: #cfe8ff;
+      --hazard-yellow: #f5a623;
+      
+      --font-arabic: 'Cairo', 'Tajawal', sans-serif;
+      --font-hud: 'Orbitron', 'Rajdhani', sans-serif;
+      --font-code: 'Rajdhani', monospace;
+      
+      --ease-hud: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--charcoal);
+      color: #e4edf8;
+      font-family: var(--font-arabic);
+      direction: rtl;
+    }
+
+        /* Petra Logo Styling */
+    .petra-logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.96) 0%, rgba(240, 244, 250, 0.92) 70%, rgba(215, 225, 240, 0.8) 100%);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      box-shadow: 0 0 25px rgba(242, 182, 50, 0.45), 0 10px 30px rgba(0, 0, 0, 0.8);
+      max-width: 175px;
+      margin-bottom: 12px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      animation: floatLogo 4s infinite ease-in-out;
+    }
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .petra-logo-wrap:hover {
+      transform: scale(1.06) translateY(-4px);
+      box-shadow: 0 0 35px rgba(242, 182, 50, 0.75), 0 12px 35px rgba(0, 0, 0, 0.9);
+    }
+    .petra-logo-img {
+      width: 100%;
+      height: auto;
+      max-height: 125px;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Scanlines & CRT Overlays */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+      background-size: 100% 4px;
+      z-index: 900;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, transparent 45%, rgba(6, 8, 12, 0.88) 100%);
+      z-index: 901;
+      pointer-events: none;
+    }
+
+    /* Screen Shake & Glitch */
+    @keyframes screenShake {
+      0% { transform: translate(0, 0); }
+      15% { transform: translate(-8px, 6px); }
+      30% { transform: translate(7px, -5px); }
+      45% { transform: translate(-5px, -6px); }
+      60% { transform: translate(6px, 4px); }
+      75% { transform: translate(-3px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+    .shake-active {
+      animation: screenShake 0.4s var(--ease-hud);
+    }
+
+    /* 3-Layer Architecture */
+    #backdrop-layer {
+      position: fixed;
+      inset: -4%;
+      width: 108%;
+      height: 108%;
+      z-index: 1;
+      background-size: cover;
+      background-position: center;
+      transition: background-image 0.8s ease, transform 0.15s ease-out;
+      will-change: transform;
+      background-color: #07090d;
+    }
+
+    #backdrop-layer.ken-burns {
+      animation: kenBurns 35s infinite alternate ease-in-out;
+    }
+
+    @keyframes kenBurns {
+      0% { transform: scale(1.0) translate(0, 0); }
+      50% { transform: scale(1.06) translate(-1%, 1%); }
+      100% { transform: scale(1.03) translate(1%, -1%); }
+    }
+
+    #three-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #ui-layer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Chamfered & Cybernetic Plates */
+    .chamfer-plate {
+      background: rgba(18, 24, 36, 0.82);
+      border: 1px solid var(--metal-border);
+      clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px);
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .chamfer-cut-tr {
+      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+    }
+
+    .hazard-stripes {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(245, 166, 35, 0.85),
+        rgba(245, 166, 35, 0.85) 10px,
+        rgba(18, 16, 16, 0.95) 10px,
+        rgba(18, 16, 16, 0.95) 20px
+      );
+    }
+
+    .hazard-stripes-cyan {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(39, 196, 255, 0.65),
+        rgba(39, 196, 255, 0.65) 8px,
+        rgba(10, 15, 24, 0.95) 8px,
+        rgba(10, 15, 24, 0.95) 16px
+      );
+    }
+
+    .hazard-stripes-red {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(224, 38, 47, 0.75),
+        rgba(224, 38, 47, 0.75) 8px,
+        rgba(15, 8, 10, 0.95) 8px,
+        rgba(15, 8, 10, 0.95) 16px
+      );
+    }
+
+    /* Corner Bracket HUD Frames */
+    .hud-frame {
+      position: relative;
+    }
+    .hud-frame::before, .hud-frame::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: var(--cyan);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .hud-frame::before {
+      top: -2px;
+      right: -2px;
+      border-top: 2px solid;
+      border-right: 2px solid;
+    }
+    .hud-frame::after {
+      bottom: -2px;
+      left: -2px;
+      border-bottom: 2px solid;
+      border-left: 2px solid;
+    }
+
+    /* Chrome Title Typography */
+    .title-cybertron {
+      font-family: var(--font-hud);
+      font-size: clamp(2.4rem, 8vw, 5.5rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      background: linear-gradient(180deg, #ffffff 0%, #b8cde3 45%, #6682a3 55%, #ffffff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 15px rgba(39, 196, 255, 0.7));
+      display: inline-block;
+      position: relative;
+    }
+
+    .ink-banner {
+      background: rgba(8, 10, 15, 0.92);
+      border-right: 4px solid var(--cyan);
+      border-left: 4px solid var(--orange);
+      padding: 6px 18px;
+      display: inline-block;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    }
+
+    /* Buttons */
+    .cyber-btn {
+      position: relative;
+      background: linear-gradient(135deg, rgba(39, 196, 255, 0.25) 0%, rgba(27, 34, 48, 0.95) 100%);
+      border: 1px solid var(--cyan);
+      color: #fff;
+      font-family: var(--font-hud);
+      font-weight: 700;
+      padding: 12px 28px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s var(--ease-hud);
+      text-transform: uppercase;
+      clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+      box-shadow: 0 0 15px rgba(39, 196, 255, 0.3);
+    }
+    .cyber-btn:hover {
+      background: var(--cyan);
+      color: #07090d;
+      box-shadow: 0 0 25px rgba(39, 196, 255, 0.8);
+      transform: translateY(-2px);
+    }
+    .cyber-btn:active {
+      transform: translateY(1px);
+    }
+    .cyber-btn.danger {
+      border-color: var(--red);
+      background: linear-gradient(135deg, rgba(224, 38, 47, 0.25) 0%, rgba(27, 34, 48, 0.95) 100%);
+      box-shadow: 0 0 15px rgba(224, 38, 47, 0.3);
+    }
+    .cyber-btn.danger:hover {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 0 25px rgba(224, 38, 47, 0.8);
+    }
+
+    /* TOP HUD NAVIGATION BAR */
+    #hud-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(10, 13, 18, 0.88);
+      border-bottom: 1px solid var(--metal-border);
+      backdrop-filter: blur(10px);
+    }
+
+    .hud-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .hud-brand-emblem {
+      width: 36px;
+      height: 36px;
+      filter: drop-shadow(0 0 8px var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hud-brand-title {
+      font-family: var(--font-hud);
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+    .hud-brand-sub {
+      font-size: 0.72rem;
+      color: var(--cyan);
+      font-family: var(--font-arabic);
+    }
+
+    .hud-faction-gauge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(16, 21, 30, 0.8);
+      padding: 6px 14px;
+      border: 1px solid var(--metal-border);
+      border-radius: 4px;
+    }
+    .gauge-bar-wrap {
+      width: 140px;
+      height: 8px;
+      background: rgba(224, 38, 47, 0.8);
+      position: relative;
+      overflow: hidden;
+      border-radius: 2px;
+    }
+    .gauge-bar-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 55%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      transition: width 0.6s ease;
+    }
+    .gauge-label {
+      font-family: var(--font-code);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .hud-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      background: rgba(27, 34, 48, 0.8);
+      border: 1px solid var(--metal-border);
+      color: #cfddec;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .icon-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+
+    /* Live Announcement Bar */
+    #announcement-banner {
+      background: linear-gradient(90deg, rgba(224, 38, 47, 0.95), rgba(138, 61, 255, 0.95));
+      color: #fff;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* SCREEN ROUTING & WRAPPERS */
+    .app-screen {
+      flex: 1;
+      width: 100%;
+      min-height: calc(100vh - 65px);
+      padding: 24px 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: fadeInScreen 0.5s var(--ease-hud);
+    }
+    .app-screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeInScreen {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ==========================================================================
+       SCREEN 1: INTRO (05_face_off)
+       ========================================================================== */
+    #screen-intro {
+      text-align: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .intro-content {
+      max-width: 850px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      z-index: 5;
+    }
+    .intro-tagline {
+      font-size: clamp(1.2rem, 3.5vw, 2.2rem);
+      font-weight: 900;
+      color: var(--orange);
+      text-shadow: 0 0 15px rgba(255, 122, 26, 0.6);
+      letter-spacing: 1px;
+    }
+    .intro-subline {
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      color: #b5c7db;
+      font-weight: 700;
+    }
+    .intro-meta-box {
+      display: flex;
+      gap: 20px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .meta-chip {
+      background: rgba(14, 20, 30, 0.85);
+      border: 1px solid var(--metal-border);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-hud);
+      font-size: 0.95rem;
+      border-radius: 2px;
+      clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    }
+
+    /* ==========================================================================
+       SCREEN 2: LOGIN (06_cores_room)
+       ========================================================================== */
+    #screen-login {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .login-container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+    .cores-grid {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      width: 100%;
+      margin: 20px 0;
+    }
+    .core-card {
+      width: 175px;
+      min-width: 155px;
+      padding: 16px 12px;
+      background: rgba(18, 24, 36, 0.85);
+      border: 1px solid var(--metal-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s var(--ease-hud);
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    }
+    .core-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--core-color, var(--cyan));
+      box-shadow: 0 0 10px var(--core-color, var(--cyan));
+    }
+    .core-card:hover {
+      transform: translateY(-8px) scale(1.03);
+      border-color: var(--core-color, var(--cyan));
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px var(--core-glow, var(--cyan-glow));
+    }
+    .core-card.selected {
+      border-color: var(--core-color, var(--cyan));
+      background: rgba(25, 35, 52, 0.95);
+      box-shadow: 0 0 25px var(--core-glow, var(--cyan-glow));
+    }
+    .team-emblem-badge {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      filter: drop-shadow(0 0 14px var(--core-glow, var(--cyan-glow)));
+      transition: transform 0.3s ease;
+      background: rgba(10, 14, 22, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 6px;
+    }
+    .team-emblem-badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+    .core-card:hover .team-emblem-badge {
+      transform: scale(1.12) rotate(2deg);
+      filter: drop-shadow(0 0 20px var(--core-glow, var(--cyan-glow)));
+    }
+    .core-orb {
+      display: none;
+    }
+    .core-name {
+      font-weight: 800;
+      font-size: 1.05rem;
+      text-align: center;
+    }
+    .core-faction {
+      font-size: 0.72rem;
+      font-family: var(--font-hud);
+      color: #8da4be;
+      text-transform: uppercase;
+    }
+
+    /* Terminal Password Prompt */
+    .terminal-box {
+      width: 100%;
+      max-width: 480px;
+      background: rgba(14, 20, 30, 0.92);
+      border: 1px solid var(--metal-border);
+      padding: 24px;
+      position: relative;
+    }
+    .terminal-input-wrap {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .terminal-input {
+      flex: 1;
+      background: rgba(7, 10, 15, 0.9);
+      border: 1px solid var(--metal-border);
+      color: #fff;
+      font-family: var(--font-code);
+      font-size: 1.25rem;
+      padding: 10px 16px;
+      letter-spacing: 4px;
+      text-align: center;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .terminal-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+    .terminal-msg {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      text-align: center;
+      min-height: 22px;
+      font-weight: 700;
+    }
+    .terminal-msg.error {
+      color: var(--red);
+      text-shadow: 0 0 10px var(--red-glow);
+    }
+    .terminal-msg.success {
+      color: #27ff88;
+      text-shadow: 0 0 10px rgba(39, 255, 136, 0.6);
+    }
+
+    /* ==========================================================================
+       SCREEN 3: ROSTER (07_roster_room)
+       ========================================================================== */
+    #screen-roster {
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+      padding-bottom: 50px;
+    }
+    .roster-pedestals {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      width: 100%;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .pedestal-item {
+      width: 220px;
+      background: rgba(16, 22, 32, 0.8);
+      border: 1px solid var(--metal-border);
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s;
+      clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%, 0 16px);
+      opacity: 0.65;
+    }
+    .pedestal-item.active-team {
+      opacity: 1;
+      border-color: var(--team-color, var(--cyan));
+      background: rgba(22, 32, 48, 0.95);
+      box-shadow: 0 0 25px var(--team-glow, var(--cyan-glow));
+      transform: translateY(-6px);
+    }
+    .pedestal-item:hover {
+      opacity: 0.95;
+      transform: translateY(-4px);
+    }
+    .pedestal-shield {
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 0 12px var(--team-glow, var(--cyan-glow)));
+      transition: transform 0.4s ease;
+    }
+    .pedestal-shield img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .pedestal-item:hover .pedestal-shield {
+      transform: scale(1.08) rotate(2deg);
+    }
+    .pedestal-base-ring {
+      width: 100%;
+      height: 6px;
+      background: var(--team-color, var(--cyan));
+      box-shadow: 0 0 12px var(--team-glow, var(--cyan-glow));
+    }
+
+    .roster-members-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      width: 100%;
+      margin-top: 24px;
+    }
+    .member-holo-card {
+      background: rgba(18, 25, 38, 0.88);
+      border: 1px solid var(--metal-border);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .member-num-tag {
+      font-family: var(--font-hud);
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--cyan);
+      min-width: 44px;
+      text-align: center;
+      background: rgba(10, 15, 24, 0.9);
+      border: 1px solid var(--metal-border);
+      padding: 6px;
+    }
+    .member-info h4 {
+      font-size: 1.1rem;
+      color: #fff;
+    }
+    .member-role {
+      font-size: 0.78rem;
+      color: #8da4be;
+      font-weight: 700;
+    }
+
+    /* ==========================================================================
+       SCREEN 4: DAY TRACK (08_planet_war)
+       ========================================================================== */
+    #screen-daytrack {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      padding-bottom: 50px;
+    }
+    .timeline-container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 25px;
+      position: relative;
+    }
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      background: rgba(16, 22, 34, 0.85);
+      border: 1px solid var(--metal-border);
+      padding: 18px 24px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s;
+      gap: 24px;
+      clip-path: polygon(16px 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+    }
+    .timeline-item:hover {
+      border-color: var(--cyan);
+      background: rgba(22, 32, 50, 0.95);
+      transform: translateX(-6px);
+      box-shadow: 0 0 20px rgba(39, 196, 255, 0.25);
+    }
+    .timeline-item.live {
+      border-color: var(--orange);
+      box-shadow: 0 0 25px rgba(255, 122, 26, 0.4);
+      background: rgba(28, 26, 32, 0.95);
+    }
+    .timeline-item.done {
+      border-color: #27ff88;
+      opacity: 0.85;
+    }
+    .timeline-item.locked {
+      opacity: 0.55;
+      cursor: not-allowed;
+      position: relative;
+      overflow: hidden;
+    }
+    .timeline-item.locked::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(245, 166, 35, 0.15),
+        rgba(245, 166, 35, 0.15) 15px,
+        transparent 15px,
+        transparent 30px
+      );
+      pointer-events: none;
+    }
+    .station-number {
+      font-family: var(--font-hud);
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--cyan);
+      min-width: 60px;
+      text-align: center;
+    }
+    .timeline-item.live .station-number {
+      color: var(--orange);
+      text-shadow: 0 0 12px var(--orange);
+    }
+    .station-meta {
+      flex: 1;
+    }
+    .station-title {
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    .station-time {
+      font-family: var(--font-code);
+      font-size: 0.85rem;
+      color: #8da4be;
+      margin-top: 4px;
+    }
+    .station-badge {
+      font-family: var(--font-hud);
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      border-radius: 2px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-live {
+      background: var(--orange);
+      color: #000;
+      box-shadow: 0 0 10px var(--orange);
+      animation: pulseBadge 1.5s infinite;
+    }
+    @keyframes pulseBadge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .badge-done {
+      background: #27ff88;
+      color: #000;
+    }
+    .badge-locked {
+      background: #444f62;
+      color: #fff;
+    }
+
+    /* ==========================================================================
+       STATION 1: BIBLE & CHAINS (12_bible_chains)
+       ========================================================================== */
+    #screen-station-1 {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .bible-scene-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      width: 100%;
+    }
+    .bible-pedestal-frame {
+      width: 320px;
+      height: 380px;
+      position: relative;
+      perspective: 1000px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bible-card-3d {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.2s ease-out;
+      border: 3px solid var(--gold);
+      box-shadow: 0 15px 45px rgba(0,0,0,0.9), 0 0 35px var(--gold-glow);
+      overflow: hidden;
+      background: #080a0e;
+    }
+    .bible-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .chains-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.8s var(--ease-hud);
+    }
+    .chain-graphic {
+      width: 120%;
+      height: 120%;
+      position: absolute;
+      stroke: #8e9bb0;
+      stroke-width: 6;
+      fill: none;
+      filter: drop-shadow(0 0 10px rgba(0,0,0,0.9));
+    }
+    .chains-broken {
+      transform: scale(1.4);
+      opacity: 0;
+      filter: blur(8px);
+    }
+
+    .bible-reveal-panel {
+      width: 100%;
+      max-width: 780px;
+      background: rgba(16, 22, 34, 0.92);
+      border: 1px solid var(--gold);
+      padding: 28px;
+      box-shadow: 0 0 30px rgba(242, 182, 50, 0.25);
+    }
+    .step-item {
+      padding: 14px 18px;
+      border-right: 3px solid var(--gold);
+      background: rgba(10, 14, 22, 0.7);
+      margin-bottom: 12px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all 0.5s var(--ease-hud);
+    }
+    .step-item.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .verse-text {
+      font-size: 1.15rem;
+      line-height: 1.8;
+      color: #ffd980;
+      font-weight: 700;
+    }
+
+    /* ==========================================================================
+       STATION 2: GAMES ARENA & LEADERBOARD (13_arena)
+       ========================================================================== */
+    #screen-station-2 {
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .arena-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      width: 100%;
+      margin-top: 20px;
+    }
+    @media (max-width: 900px) {
+      .arena-grid { grid-template-columns: 1fr; }
+    }
+    .games-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .game-card {
+      background: rgba(18, 24, 36, 0.85);
+      border: 1px solid var(--metal-border);
+      padding: 18px;
+      clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+      transition: all 0.2s;
+    }
+    .game-card:hover {
+      border-color: var(--cyan);
+      background: rgba(24, 32, 48, 0.95);
+    }
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .game-points {
+      font-family: var(--font-hud);
+      color: var(--gold);
+      font-weight: 900;
+    }
+
+    /* 3D Bar Chart Leaderboard */
+    .leaderboard-board {
+      background: rgba(14, 20, 30, 0.9);
+      border: 1px solid var(--metal-border);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .leaderboard-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .leaderboard-team-name {
+      width: 110px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .leaderboard-bar-track {
+      flex: 1;
+      height: 24px;
+      background: rgba(8, 12, 18, 0.9);
+      border: 1px solid var(--metal-border);
+      position: relative;
+      overflow: hidden;
+    }
+    .leaderboard-bar-fill {
+      height: 100%;
+      background: var(--bar-color, var(--cyan));
+      box-shadow: 0 0 15px var(--bar-glow, var(--cyan-glow));
+      transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-left: 8px;
+    }
+    .leaderboard-score-val {
+      font-family: var(--font-hud);
+      font-size: 0.85rem;
+      font-weight: 900;
+      color: #fff;
+      padding-right: 8px;
+    }
+
+    /* ==========================================================================
+       STATION 3: CRYPTEX PUZZLE CHAMBER (14_cryptex)
+       ========================================================================== */
+    #screen-station-3 {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .cryptex-chamber {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      width: 100%;
+    }
+    .cryptex-rings-display {
+      display: flex;
+      gap: 8px;
+      padding: 14px 20px;
+      background: rgba(10, 15, 24, 0.9);
+      border: 2px solid var(--cyan);
+      box-shadow: 0 0 30px var(--cyan-glow);
+    }
+    .cryptex-dial {
+      width: 52px;
+      height: 64px;
+      background: linear-gradient(180deg, #16202c 0%, #2a3a50 50%, #16202c 100%);
+      border: 1px solid #4a6280;
+      color: #fff;
+      font-family: var(--font-hud);
+      font-size: 1.6rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+      transition: all 0.2s;
+    }
+    .cryptex-dial:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .puzzle-timer {
+      font-family: var(--font-hud);
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--orange);
+      text-shadow: 0 0 15px var(--orange);
+    }
+    .hints-accordion {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .hint-item {
+      background: rgba(16, 22, 34, 0.85);
+      border: 1px solid var(--metal-border);
+      padding: 12px 18px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .hint-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 800;
+      color: var(--gold);
+    }
+    .hint-body {
+      font-size: 0.9rem;
+      color: #b5c7db;
+      display: none;
+    }
+    .hint-item.revealed .hint-body {
+      display: block;
+    }
+
+    /* ==========================================================================
+       STATION 4: ENERGON TANKS FACTORY (15_tanks)
+       ========================================================================== */
+    #screen-station-4 {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      padding-bottom: 50px;
+    }
+    .tanks-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    .tank-unit {
+      width: 200px;
+      background: rgba(14, 20, 30, 0.92);
+      border: 1px solid var(--metal-border);
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    }
+    .tank-glass-tube {
+      width: 90px;
+      height: 240px;
+      background: rgba(8, 12, 18, 0.85);
+      border: 2px solid #3c4c66;
+      border-radius: 45px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+    }
+    .tank-fluid {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: var(--tank-fluid-color, var(--cyan));
+      box-shadow: 0 0 25px var(--tank-glow, var(--cyan-glow));
+      transition: height 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .tank-fluid::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: -50%;
+      width: 200%;
+      height: 12px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 50%;
+      animation: waveMove 3s infinite linear;
+    }
+    @keyframes waveMove {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(25%); }
+    }
+    .tank-badge-plate {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #101622;
+      border: 2px solid var(--tank-fluid-color, var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--tank-glow, var(--cyan-glow));
+    }
+    .tank-badge-plate img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+    }
+    .tank-percent {
+      font-family: var(--font-hud);
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    .tank-unit.full .tank-glass-tube {
+      border-color: #fff;
+      box-shadow: 0 0 35px var(--tank-glow, var(--cyan-glow));
+      animation: tankFullPulse 1.2s infinite alternate;
+    }
+    @keyframes tankFullPulse {
+      0% { filter: brightness(1); }
+      100% { filter: brightness(1.35); }
+    }
+
+    /* ==========================================================================
+       SCREEN 5: WAR THEATRE MODE (08_planet_war / 11_clash)
+       ========================================================================== */
+    #screen-war {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      height: 100%;
+      padding-bottom: 40px;
+    }
+    .war-hud-panel {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .war-side-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: rgba(14, 20, 30, 0.88);
+      border: 1px solid var(--metal-border);
+    }
+    .war-side-card.autobots {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+    .war-side-card.decepticons {
+      border-color: var(--red);
+      box-shadow: 0 0 20px var(--red-glow);
+    }
+    .war-controls-strip {
+      display: flex;
+      gap: 14px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* ==========================================================================
+       ADMIN COMMAND CONSOLE (OVERLAY & FLOATING TAB)
+       ========================================================================== */
+    #admin-trigger-tab {
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      z-index: 800;
+      background: rgba(18, 24, 36, 0.95);
+      border: 1px solid var(--red);
+      border-right: none;
+      color: #fff;
+      padding: 16px 8px;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      font-family: var(--font-hud);
+      font-weight: 900;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: -4px 0 20px rgba(224, 38, 47, 0.4);
+      transition: all 0.2s;
+    }
+    #admin-trigger-tab:hover {
+      background: var(--red);
+      color: #fff;
+      box-shadow: -6px 0 25px rgba(224, 38, 47, 0.8);
+    }
+
+    #admin-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(6, 9, 14, 0.85);
+      backdrop-filter: blur(14px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #admin-modal.active {
+      display: flex;
+    }
+    .admin-console-window {
+      width: 100%;
+      max-width: 980px;
+      max-height: 90vh;
+      background: #0d121a;
+      border: 2px solid var(--metal-border);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.95);
+      position: relative;
+    }
+    .admin-header {
+      padding: 14px 20px;
+      background: #141b26;
+      border-bottom: 1px solid var(--metal-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-tabs-nav {
+      display: flex;
+      background: #0a0e16;
+      border-bottom: 1px solid var(--metal-border);
+      overflow-x: auto;
+    }
+    .admin-tab-btn {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #8da4be;
+      font-family: var(--font-hud);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .admin-tab-btn:hover {
+      color: #fff;
+    }
+    .admin-tab-btn.active {
+      color: var(--cyan);
+      border-bottom-color: var(--cyan);
+      background: rgba(39, 196, 255, 0.08);
+    }
+    .admin-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .admin-form-group {
+      margin-bottom: 18px;
+    }
+    .admin-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      color: #9cb0c8;
+      font-weight: 700;
+    }
+    .admin-input, .admin-textarea, .admin-select {
+      width: 100%;
+      background: #080c12;
+      border: 1px solid var(--metal-border);
+      color: #fff;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .admin-input:focus, .admin-textarea:focus, .admin-select:focus {
+      border-color: var(--cyan);
+    }
+
+    /* PRELOADER SCREEN */
+    #preloader {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: #06080d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      transition: opacity 0.6s ease;
+    }
+    .preloader-track {
+      width: 280px;
+      height: 6px;
+      background: #141b26;
+      border: 1px solid var(--metal-border);
+      position: relative;
+      overflow: hidden;
+    }
+    .preloader-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: var(--cyan);
+      box-shadow: 0 0 15px var(--cyan);
+      transition: width 0.3s ease;
+    }
+
+    /* TOAST NOTIFICATIONS */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      z-index: 1500;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-msg {
+      background: rgba(14, 20, 30, 0.95);
+      border-right: 4px solid var(--cyan);
+      border: 1px solid var(--metal-border);
+      padding: 12px 20px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+      animation: toastSlide 0.3s var(--ease-hud);
+      pointer-events: auto;
+    }
+    @keyframes toastSlide {
+      from { transform: translateX(-30px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Preloader Screen -->
+  <div id="preloader">
+    <div class="petra-logo-wrap" style="max-width:140px; margin-bottom:0;">
+      <img src="assets/petra_logo.png" alt="اجتماع بيترا للشباب" class="petra-logo-img" style="max-height:100px;">
+    </div>
+    <div style="font-family:var(--font-hud); font-size:1.2rem; font-weight:900; letter-spacing:3px; color:#fff;">
+      CYBERTRON OS // INITIALIZING
+    </div>
+    <div class="preloader-track">
+      <div id="preloader-bar" class="preloader-bar"></div>
+    </div>
+    <div id="preloader-status" style="font-size:0.8rem; color:#8da4be; font-family:var(--font-code);">
+      CALIBRATING OPTICAL SENSORS...
+    </div>
+  </div>
+
+  <!-- Scanlines and CRT Vignette -->
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <!-- Layer 1: Background Layer with Parallax & Ken-Burns -->
+  <div id="backdrop-layer" class="ken-burns"></div>
+
+  <!-- Layer 2: WebGL Three.js Canvas -->
+  <canvas id="three-canvas"></canvas>
+
+  <!-- Layer 3: Interactive Cybernetic HUD UI -->
+  <div id="ui-layer">
+    
+    <!-- Top HUD Navigation Bar -->
+    <header id="hud-header">
+      <div class="hud-brand" onclick="Router.navigate('intro')">
+        <div class="hud-brand-emblem" style="background:#fff; border-radius:6px; padding:2px; border:1px solid var(--gold); width:38px; height:38px; box-shadow:0 0 10px rgba(242,182,50,0.5);">
+          <img src="assets/petra_logo.png" alt="بيترا" style="width:100%; height:100%; object-fit:contain;">
+        </div>
+        <div>
+          <div class="hud-brand-title">CYBERTRON</div>
+          <div class="hud-brand-sub" id="header-event-date-loc">10/8 • المعصرة</div>
+        </div>
+      </div>
+
+      <!-- Faction Balance Gauge -->
+      <div class="hud-faction-gauge">
+        <span class="gauge-label" style="color:var(--cyan)">AUTOBOTS</span>
+        <div class="gauge-bar-wrap">
+          <div id="header-gauge-fill" class="gauge-bar-fill"></div>
+        </div>
+        <span class="gauge-label" style="color:var(--red)">DECEPTICONS</span>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="hud-actions">
+        <a href="cybertron_petra_event.zip" download="cybertron_petra_event.zip" class="cyber-btn" style="padding:6px 14px; font-size:0.75rem; border-color:var(--gold); color:var(--gold); text-decoration:none;" title="تحميل ملفات الموقع كاملة في ملف ZIP">
+          📥 تحميل (ZIP)
+        </a>
+        <button class="cyber-btn" style="padding:6px 14px; font-size:0.75rem;" onclick="Router.navigate('war')">
+          ⚔️ ساحة الحرب
+        </button>
+        <button id="nav-btn-track" class="cyber-btn" style="padding:6px 14px; font-size:0.75rem;" onclick="Router.navigate('daytrack')">
+          مسار اليوم
+        </button>
+        <button id="nav-btn-roster" class="cyber-btn" style="padding:6px 14px; font-size:0.75rem;" onclick="Router.navigate('roster')">
+          الفريق
+        </button>
+        <button id="btn-sound-toggle" class="icon-btn" onclick="SoundEngine.toggleMute()" title="كتم / تشغيل الصوت">
+          <span id="sound-icon-status">🔊</span>
+        </button>
+        <button id="btn-logout" class="icon-btn" style="display:none;" onclick="App.logout()" title="تسجيل الخروج">
+          🚪
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Announcement Banner -->
+    <div id="announcement-banner" style="display:none;">
+      <span id="announcement-text">⚠️ تنبيه قيادة العمليات: التحدي القادم سيبدأ خلال دقائق!</span>
+      <button onclick="document.getElementById('announcement-banner').style.display='none'" style="background:none; border:none; color:#fff; cursor:pointer; font-size:1.1rem;">✕</button>
+    </div>
+
+    <!-- MAIN SCREENS CONTAINER -->
+    <main style="flex:1; width:100%; display:flex; flex-direction:column;">
+      
+      <!-- ========================================== -->
+      <!-- SCREEN: INTRO                              -->
+      <!-- ========================================== -->
+      <section id="screen-intro" class="app-screen active">
+        <div class="intro-content">
+          <div class="petra-logo-wrap">
+            <img src="assets/petra_logo.png" alt="اجتماع بيترا للشباب" class="petra-logo-img">
+          </div>
+          <div class="ink-banner">
+            <span style="font-size:0.9rem; font-weight:800; color:var(--gold); font-family:var(--font-hud);">اجتماع بيترا للشباب // كنيسة القديسين بطرس وبولس</span>
+          </div>
+
+          <h1 class="title-cybertron" id="intro-title-text">يوم CYBERTRON</h1>
+          
+          <div class="intro-tagline" id="intro-tagline-text">جاهز للتحديات</div>
+          <div class="intro-subline" id="intro-subline-text">يبقى لازم تكون معانا في اليوم</div>
+
+          <div class="intro-meta-box">
+            <div class="meta-chip">
+              <span style="color:var(--cyan)">📅</span>
+              <span id="intro-meta-date">10/8</span>
+            </div>
+            <div class="meta-chip">
+              <span style="color:var(--orange)">📍</span>
+              <span id="intro-meta-loc">المعصرة</span>
+            </div>
+            <div class="meta-chip">
+              <span style="color:var(--gold)">⚡</span>
+              <span id="intro-meta-teams-count">12 فرقة متنافسة</span>
+            </div>
+          </div>
+
+          <button class="cyber-btn" style="font-size:1.2rem; padding:16px 45px; margin-top:20px;" onclick="SoundEngine.playClick(); Router.navigate('login')">
+            <span>ابدأ المهمة</span>
+            <span>➔</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: LOGIN                              -->
+      <!-- ========================================== -->
+      <section id="screen-login" class="app-screen">
+        <div class="login-container">
+          <div style="text-align:center;">
+            <div class="ink-banner">
+              <span style="font-size:0.85rem; font-weight:800; color:var(--cyan); font-family:var(--font-hud);">COMMAND DECK // AUTHORIZATION</span>
+            </div>
+            <h2 style="font-size:2rem; font-weight:900; margin-top:10px; color:#fff;">اختر شفرة فريقك للولوج</h2>
+            <p style="color:#8da4be; font-size:0.95rem; margin-top:4px;">اضغط على شعار فريقك لتفعيل محطة الولوج وإدخال الشفرة</p>
+          </div>
+
+          <!-- 5 Energon Cores -->
+          <div class="cores-grid" id="login-cores-grid"></div>
+
+          <!-- Password Cipher Terminal -->
+          <div class="terminal-box hud-frame" id="login-terminal-box" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-family:var(--font-hud); font-size:0.85rem; color:var(--cyan); font-weight:700;">CYPHER KEY TERMINAL</span>
+              <span id="terminal-selected-team-name" style="font-weight:800; color:#fff;">فريق</span>
+            </div>
+            
+            <div class="terminal-input-wrap">
+              <input type="password" id="login-pass-input" class="terminal-input" placeholder="•••••" maxlength="8" autocomplete="off">
+              <button class="cyber-btn" onclick="App.attemptLogin()">تأكيد</button>
+            </div>
+
+            <div id="login-terminal-msg" class="terminal-msg"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: ROSTER                             -->
+      <!-- ========================================== -->
+      <section id="screen-roster" class="app-screen">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+          <div class="ink-banner">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--cyan); font-family:var(--font-hud);">HOLOGRAPHIC ROSTER ROOM</span>
+          </div>
+          <h2 style="font-size:2rem; font-weight:900; margin-top:10px; color:#fff;" id="roster-heading">منصات الفرق والعتاد</h2>
+          
+          <!-- 5 Pedestals -->
+          <div class="roster-pedestals" id="roster-pedestals-container"></div>
+
+          <!-- Squad Members holographic cards -->
+          <div style="width:100%; margin-top:30px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--metal-border); padding-bottom:8px;">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#fff;" id="roster-squad-title">أعضاء الفريق المسجلين</h3>
+              <button class="cyber-btn" style="padding:8px 20px; font-size:0.85rem;" onclick="Router.navigate('daytrack')">
+                الانتقال لمسار اليوم ➔
+              </button>
+            </div>
+            <div class="roster-members-grid" id="roster-members-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: DAY TRACK                          -->
+      <!-- ========================================== -->
+      <section id="screen-daytrack" class="app-screen">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+          <div class="ink-banner">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--orange); font-family:var(--font-hud);">OPERATION TIMELINE // SCHEDULE</span>
+          </div>
+          <h2 style="font-size:2rem; font-weight:900; margin-top:10px; color:#fff;">مسار محطات اليوم</h2>
+          <p style="color:#8da4be; font-size:0.95rem; margin-top:4px;">اضغط على أي محطة مفتوحة لدخول غرفتها الخاصة</p>
+
+          <div class="timeline-container" id="daytrack-timeline-container"></div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: STATION 1 (الكلمة مع أبونا)        -->
+      <!-- ========================================== -->
+      <section id="screen-station-1" class="app-screen">
+        <div class="bible-scene-container">
+          <div class="ink-banner">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--gold); font-family:var(--font-hud);">STATION 01 // SANCTUARY ARCHIVE</span>
+          </div>
+          
+          <h2 style="font-size:2.2rem; font-weight:900; color:var(--gold); text-shadow:0 0 15px var(--gold-glow);" id="st1-title">
+            اكتشف: هل الشيطان مقيّد أم حر؟
+          </h2>
+
+          <!-- 3D Bible with chains -->
+          <div class="bible-pedestal-frame hud-frame">
+            <div id="bible-card-element" class="bible-card-3d">
+              <img id="st1-bible-img" src="assets/12_bible_chains.jpg" alt="Holy Scripture" class="bible-img">
+              <div id="st1-chains-overlay" class="chains-overlay">
+                <svg class="chain-graphic" viewBox="0 0 100 100">
+                  <line x1="0" y1="0" x2="100" y2="100" stroke="#8e9bb0" stroke-width="8" stroke-dasharray="10 5"/>
+                  <line x1="100" y1="0" x2="0" y2="100" stroke="#8e9bb0" stroke-width="8" stroke-dasharray="10 5"/>
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#f2b632" stroke-width="4"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <button id="st1-btn-discover" class="cyber-btn" style="border-color:var(--gold); box-shadow:0 0 20px var(--gold-glow); font-size:1.15rem; padding:14px 40px;" onclick="App.triggerBibleDiscovery()">
+            ⛓️ اضغط للاكتشاف وفك القيود
+          </button>
+
+          <!-- Reveal Panel -->
+          <div id="st1-reveal-panel" class="bible-reveal-panel hud-frame" style="display:none;">
+            <h3 style="font-size:1.3rem; color:var(--gold); margin-bottom:16px;">محتوى الكلمة والآيات المقررة</h3>
+            <div id="st1-steps-container"></div>
+          </div>
+
+          <button class="cyber-btn" style="margin-top:20px; font-size:0.85rem;" onclick="Router.navigate('daytrack')">
+            ⬅ العودة للمسار
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: STATION 2 (الألعاب)                -->
+      <!-- ========================================== -->
+      <section id="screen-station-2" class="app-screen">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+          <div class="ink-banner">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--cyan); font-family:var(--font-hud);">STATION 02 // COMBAT & CHALLENGE ARENA</span>
+          </div>
+          <h2 style="font-size:2rem; font-weight:900; margin-top:10px; color:#fff;">حلبة التحديات والألعاب</h2>
+
+          <div class="arena-grid">
+            <!-- Games Cards -->
+            <div class="games-list" id="st2-games-list"></div>
+
+            <!-- Leaderboard -->
+            <div class="leaderboard-board hud-frame">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--metal-border); padding-bottom:10px;">
+                <h3 style="font-size:1.2rem; font-weight:900; color:var(--gold);">لوحة صدارة الفرق</h3>
+                <span style="font-family:var(--font-code); font-size:0.8rem; color:#8da4be;">LIVE ENERGON DATA</span>
+              </div>
+              <div id="st2-leaderboard-rows" style="display:flex; flex-direction:column; gap:14px; margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <button class="cyber-btn" style="margin-top:30px; font-size:0.85rem;" onclick="Router.navigate('daytrack')">
+            ⬅ العودة للمسار
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: STATION 3 (حل اللغز)               -->
+      <!-- ========================================== -->
+      <section id="screen-station-3" class="app-screen">
+        <div class="cryptex-chamber">
+          <div class="ink-banner">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--purple); font-family:var(--font-hud);">STATION 03 // CYPHER VAULT</span>
+          </div>
+          <h2 style="font-size:2.2rem; font-weight:900; color:#fff;">شفرة الكربتكس الرقمي</h2>
+
+          <div class="puzzle-timer" id="st3-timer-display">15:00</div>
+
+          <!-- Puzzle Question Card -->
+          <div class="chamfer-plate hud-frame" style="padding:20px 30px; max-width:650px; text-align:center;">
+            <p id="st3-puzzle-text" style="font-size:1.25rem; font-weight:800; line-height:1.7; color:#fff;">
+              جاري تحميل نص اللغز من بروتوكول القيادة...
+            </p>
+          </div>
+
+          <!-- Interactive Cryptex Dials -->
+          <div class="cryptex-rings-display" id="cryptex-dials-container"></div>
+
+          <div style="display:flex; gap:12px; margin-top:10px;">
+            <button class="cyber-btn" onclick="App.checkCryptexAnswer()">فك الشفرة</button>
+            <button class="cyber-btn danger" onclick="App.resetCryptexDials()">إعادة الضبط</button>
+          </div>
+
+          <div id="st3-feedback-msg" class="terminal-msg" style="font-size:1.1rem;"></div>
+
+          <!-- 3 Hints System -->
+          <div class="hints-accordion" id="st3-hints-container"></div>
+
+          <button class="cyber-btn" style="margin-top:20px; font-size:0.85rem;" onclick="Router.navigate('daytrack')">
+            ⬅ العودة للمسار
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: STATION 4 (تعبئة التانك)            -->
+      <!-- ========================================== -->
+      <section id="screen-station-4" class="app-screen">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+          <div class="ink-banner">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--cyan); font-family:var(--font-hud);">STATION 04 // ENERGON DEPOT</span>
+          </div>
+          <h2 style="font-size:2rem; font-weight:900; margin-top:10px; color:#fff;">خزانات طاقة الإنرجون لجميع الفرق</h2>
+          <p style="color:#8da4be; font-size:0.95rem; margin-top:4px;">تتغذى الخزانات تلقائياً بناءً على إجمالي نقاط التحديات</p>
+
+          <div class="tanks-row" id="st4-tanks-container"></div>
+
+          <button class="cyber-btn" style="margin-top:40px; font-size:0.85rem;" onclick="Router.navigate('daytrack')">
+            ⬅ العودة للمسار
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN: WAR MODE                           -->
+      <!-- ========================================== -->
+      <section id="screen-war" class="app-screen">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+          <div class="war-hud-panel">
+            <div class="war-side-card autobots">
+              <span style="font-size:1.5rem;">🛡️</span>
+              <div>
+                <h4 style="color:var(--cyan); font-family:var(--font-hud);">AUTOBOTS</h4>
+                <div id="war-autobots-score" style="font-size:1.2rem; font-weight:900;">0 PTS</div>
+              </div>
+            </div>
+
+            <div style="text-align:center;">
+              <h2 style="font-size:2rem; font-weight:900; color:#fff;">مسرح المعركة الكبرى</h2>
+              <span style="font-family:var(--font-code); font-size:0.8rem; color:var(--orange);">LIVE SKIRMISH SIMULATOR</span>
+            </div>
+
+            <div class="war-side-card decepticons">
+              <span style="font-size:1.5rem;">⚔️</span>
+              <div>
+                <h4 style="color:var(--red); font-family:var(--font-hud);">DECEPTICONS</h4>
+                <div id="war-decepticons-score" style="font-size:1.2rem; font-weight:900;">0 PTS</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chamfer-plate hud-frame" style="width:100%; max-width:850px; padding:30px; text-align:center;">
+            <p style="font-size:1.15rem; color:#b5c7db; line-height:1.8;">
+              أطلق المقذوفات التكتيكية وصواريخ الإنرجون لتفعيل الانفجارات والمؤثرات الملحمية ثلاثية الأبعاد!
+            </p>
+            <div class="war-controls-strip">
+              <button class="cyber-btn" onclick="VFXEngine.triggerWarLaser('cyan')">⚡ إطلاق ليزر الأوتوبوت</button>
+              <button class="cyber-btn danger" onclick="VFXEngine.triggerWarLaser('red')">💥 مدفع الديسيبتيكون</button>
+              <button class="cyber-btn" style="border-color:var(--purple); color:var(--purple);" onclick="VFXEngine.triggerMegaExplosion()">🌌 انفجار موجي (Shockwave 16)</button>
+            </div>
+          </div>
+
+          <button class="cyber-btn" style="margin-top:30px; font-size:0.85rem;" onclick="Router.navigate('daytrack')">
+            ⬅ العودة للمسار
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Slim Vertical ADMIN Trigger Tab -->
+  <div id="admin-trigger-tab" onclick="Admin.openModal()">
+    ADMIN // تحكم
+  </div>
+
+  <!-- Dedicated ADMIN Command Console Modal -->
+  <div id="admin-modal">
+    <div class="admin-console-window hud-frame">
+      <div class="admin-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="color:var(--red); font-size:1.2rem;">⚙️</span>
+          <h3 style="font-family:var(--font-hud); font-size:1.1rem; color:#fff;">CYBERTRON COMMAND CONSOLE</h3>
+        </div>
+        <button onclick="Admin.closeModal()" style="background:none; border:none; color:#8da4be; font-size:1.3rem; cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Password Auth View if not logged into Admin -->
+      <div id="admin-auth-view" style="padding:40px; display:flex; flex-direction:column; align-items:center; gap:20px;">
+        <h4 style="font-size:1.3rem; color:#fff;">أدخل رمز حماية غرفة التحكم</h4>
+        <div style="display:flex; gap:10px; max-width:400px; width:100%;">
+          <input type="password" id="admin-pass-input" class="admin-input" placeholder="Admin Passcode..." style="text-align:center;">
+          <button class="cyber-btn danger" onclick="Admin.verifyPassword()">دخول</button>
+        </div>
+        <div id="admin-auth-msg" class="terminal-msg"></div>
+        <div style="font-size:0.75rem; color:#62758e; font-family:var(--font-code);">SECURED BY SHA-256 HASH VERIFICATION</div>
+      </div>
+
+      <!-- Admin Main Suite View (when authenticated) -->
+      <div id="admin-suite-view" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+        <nav class="admin-tabs-nav">
+          <button class="admin-tab-btn active" onclick="Admin.switchTab('general')">معلومات اليوم</button>
+          <button class="admin-tab-btn" onclick="Admin.switchTab('teams')">الفرق والأعضاء</button>
+          <button class="admin-tab-btn" onclick="Admin.switchTab('schedule')">المسار والجدول</button>
+          <button class="admin-tab-btn" onclick="Admin.switchTab('games')">الألعاب والنتائج</button>
+          <button class="admin-tab-btn" onclick="Admin.switchTab('station1')">محطة الكلمة</button>
+          <button class="admin-tab-btn" onclick="Admin.switchTab('puzzle')">اللغز والشفرة</button>
+          <button class="admin-tab-btn" onclick="Admin.switchTab('storage')">النسخ والربط</button>
+        </nav>
+
+        <div class="admin-body" id="admin-tab-content">
+          <!-- Dynamically populated tab panes -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- Custom Station Details Modal -->
+  <div id="station-detail-modal" style="position:fixed; inset:0; z-index:1100; background:rgba(6,9,14,0.88); backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; padding:20px;">
+    <div class="chamfer-plate hud-frame" style="max-width:550px; width:100%; padding:28px; text-align:center;">
+      <div class="ink-banner" style="margin-bottom:12px;">
+        <span id="custom-st-num" style="font-family:var(--font-hud); color:var(--cyan); font-weight:900;">STATION</span>
+      </div>
+      <h3 id="custom-st-title" style="font-size:1.8rem; color:#fff; font-weight:900; margin-bottom:8px;">عنوان الفقرة</h3>
+      <div id="custom-st-time" style="font-family:var(--font-code); color:var(--orange); font-size:1rem; margin-bottom:16px;">الوقت</div>
+      <p id="custom-st-desc" style="color:#b5c7db; font-size:1.05rem; line-height:1.7; margin-bottom:24px;">الوصف</p>
+      <button class="cyber-btn" onclick="document.getElementById('station-detail-modal').style.display='none'">إغلاق النافذة</button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- ==========================================================================
+       APPLICATION ENGINE JAVASCRIPT
+       ========================================================================== -->
+  <script>
+    /* ==========================================================================
+       1. DEFAULT STATE & CONFIGURATION
+       ========================================================================== */
+    const ADMIN_SHA256 = "e001b1ed474176161abd788664691e66f4ad6266746c6d44a3279f68a6e509f6";
+
+    const DEFAULT_CONFIG = {
+      event: {
+        title: "يوم CYBERTRON",
+        tagline: "جاهز للتحديات",
+        subline: "يبقى لازم تكون معانا في اليوم",
+        date: "10/8",
+        location: "المعصرة",
+        announcement: "⚠️ تنبيه العمليات: جاهزون لبدء المنافسات الكبرى في المعصرة!",
+        showAnnouncement: false
+      },
+            version: 2,
+      teams: [
+        {
+          id: "team_1",
+          name: "Optimus Prime",
+          arabicName: "أوبتيموس برايم",
+          faction: "autobots",
+          color: "#27c4ff",
+          glow: "rgba(39, 196, 255, 0.6)",
+          password: "12345",
+          score: 85,
+          badgeKey: "03_emblem_autobot.jpg",
+          members: [
+            { id: "m1", name: "مينا نبيل", number: "01", role: "قائد الفريق" },
+            { id: "m2", name: "بيتر عادل", number: "02", role: "مهندس تكتيكي" },
+            { id: "m3", name: "ماريو سامي", number: "03", role: "دفاع أرضي" }
+          ]
+        },
+        {
+          id: "team_2",
+          name: "Megatron",
+          arabicName: "ميجاترون",
+          faction: "decepticons",
+          color: "#e0262f",
+          glow: "rgba(224, 38, 47, 0.6)",
+          password: "54321",
+          score: 92,
+          badgeKey: "04_emblem_decepticon.jpg",
+          members: [
+            { id: "m4", name: "جورج سمير", number: "01", role: "قائد الفصيل" },
+            { id: "m5", name: "فادي يوسف", number: "02", role: "قاذف مدفعي" },
+            { id: "m6", name: "أنطون ممدوح", number: "03", role: "قوة هجومية" }
+          ]
+        },
+        {
+          id: "team_3",
+          name: "Bumblebee",
+          arabicName: "بامبلبي",
+          faction: "autobots",
+          color: "#f5a623",
+          glow: "rgba(245, 166, 35, 0.6)",
+          password: "67890",
+          score: 78,
+          badgeKey: "03_emblem_autobot.jpg",
+          members: [
+            { id: "m7", name: "داود ماجد", number: "01", role: "قائد الاستطلاع" },
+            { id: "m8", name: "يوحنا أشرف", number: "02", role: "مراوغ سريع" }
+          ]
+        },
+        {
+          id: "team_4",
+          name: "Starscream",
+          arabicName: "ستارسكريم",
+          faction: "decepticons",
+          color: "#8a3dff",
+          glow: "rgba(138, 61, 255, 0.6)",
+          password: "09876",
+          score: 80,
+          badgeKey: "04_emblem_decepticon.jpg",
+          members: [
+            { id: "m9", name: "توماس إيهاب", number: "01", role: "سيد الأجواء" },
+            { id: "m10", name: "يوسف صفوت", number: "02", role: "هجوم جوي" }
+          ]
+        },
+        {
+          id: "team_5",
+          name: "Jazz",
+          arabicName: "جاز",
+          faction: "autobots",
+          color: "#cfe8ff",
+          glow: "rgba(207, 232, 255, 0.6)",
+          password: "00000",
+          score: 70,
+          badgeKey: "03_emblem_autobot.jpg",
+          members: [
+            { id: "m11", name: "ستيفن عماد", number: "01", role: "قائد المناورة" },
+            { id: "m12", name: "دانيال عزت", number: "02", role: "خبير تكتيكي" }
+          ]
+        },
+        {
+          id: "team_6",
+          name: "Soundwave",
+          arabicName: "ساوندويف",
+          faction: "decepticons",
+          color: "#3b82f6",
+          glow: "rgba(59, 130, 246, 0.6)",
+          password: "11223",
+          score: 88,
+          badgeKey: "04_emblem_decepticon.jpg",
+          members: [
+            { id: "m13", name: "مارك رأفت", number: "01", role: "خبير الترددات" },
+            { id: "m14", name: "رامي نصر", number: "02", role: "تجسس إلكتروني" }
+          ]
+        },
+        {
+          id: "team_7",
+          name: "Ironhide",
+          arabicName: "أيرونهايد",
+          faction: "autobots",
+          color: "#ef4444",
+          glow: "rgba(239, 68, 68, 0.6)",
+          password: "33445",
+          score: 82,
+          badgeKey: "03_emblem_autobot.jpg",
+          members: [
+            { id: "m15", name: "كيرلس رفعت", number: "01", role: "مدفعية ثقيلة" },
+            { id: "m16", name: "أندرو مجدي", number: "02", role: "درع واقي" }
+          ]
+        },
+        {
+          id: "team_8",
+          name: "Shockwave",
+          arabicName: "شوكويف",
+          faction: "decepticons",
+          color: "#a855f7",
+          glow: "rgba(168, 85, 247, 0.6)",
+          password: "55667",
+          score: 90,
+          badgeKey: "04_emblem_decepticon.jpg",
+          members: [
+            { id: "m17", name: "ميخائيل وهبة", number: "01", role: "رئيس العلماء" },
+            { id: "m18", name: "جون سامي", number: "02", role: "ليزر مدمر" }
+          ]
+        },
+        {
+          id: "team_9",
+          name: "Ratchet",
+          arabicName: "راتشيت",
+          faction: "autobots",
+          color: "#10b981",
+          glow: "rgba(16, 185, 129, 0.6)",
+          password: "77889",
+          score: 75,
+          badgeKey: "03_emblem_autobot.jpg",
+          members: [
+            { id: "m19", name: "مارتن نشأت", number: "01", role: "طبيب العمليات" },
+            { id: "m20", name: "سامح عاطف", number: "02", role: "صيانة ميكانيكية" }
+          ]
+        },
+        {
+          id: "team_10",
+          name: "Barricade",
+          arabicName: "باريكيد",
+          faction: "decepticons",
+          color: "#06b6d4",
+          glow: "rgba(6, 182, 212, 0.6)",
+          password: "99001",
+          score: 84,
+          badgeKey: "04_emblem_decepticon.jpg",
+          members: [
+            { id: "m21", name: "ريمون ميلاد", number: "01", role: "مطاردة سريعة" },
+            { id: "m22", name: "عماد شكري", number: "02", role: "حصار تكتيكي" }
+          ]
+        },
+        {
+          id: "team_11",
+          name: "Grimlock",
+          arabicName: "جريملوك",
+          faction: "autobots",
+          color: "#f97316",
+          glow: "rgba(249, 115, 22, 0.6)",
+          password: "24680",
+          score: 95,
+          badgeKey: "03_emblem_autobot.jpg",
+          members: [
+            { id: "m23", name: "بيشوي هاني", number: "01", role: "قوة نارية ساحقة" },
+            { id: "m24", name: "ملاك فوزي", number: "02", role: "اقتحام مباشر" }
+          ]
+        },
+        {
+          id: "team_12",
+          name: "Devastator",
+          arabicName: "ديفاستيتور",
+          faction: "decepticons",
+          color: "#84cc16",
+          glow: "rgba(132, 204, 22, 0.6)",
+          password: "13579",
+          score: 91,
+          badgeKey: "04_emblem_decepticon.jpg",
+          members: [
+            { id: "m25", name: "إبرام نادي", number: "01", role: "تدمير شامل" },
+            { id: "m26", name: "هاني لبيب", number: "02", role: "سحق العوائق" }
+          ]
+        }
+      ],
+      stations: [
+        {
+          id: "st_1",
+          number: "01",
+          title: "الكلمة مع أبونا",
+          time: "10:00 AM - 11:30 AM",
+          desc: "دراسة وتأمل كتابي: اكتشف هل الشيطان مقيّد أم حر؟",
+          status: "live",
+          route: "station-1"
+        },
+        {
+          id: "st_2",
+          number: "02",
+          title: "حلبة الألعاب والتحديات",
+          time: "11:45 AM - 01:30 PM",
+          desc: "منافسات كبرى ونقاط حية بين الفرق الخمسة",
+          status: "upcoming",
+          route: "station-2"
+        },
+        {
+          id: "st_3",
+          number: "03",
+          title: "حل اللغز والكربتكس",
+          time: "02:00 PM - 03:00 PM",
+          desc: "فك الشفرة الرقمية وتحرير أسرار السايبرترون",
+          status: "locked",
+          route: "station-3"
+        },
+        {
+          id: "st_4",
+          number: "04",
+          title: "تعبئة تانك الإنرجون",
+          time: "03:15 PM - 04:30 PM",
+          desc: "حساب النقاط وضخ الطاقة وإعلان الفائز بالمعركة",
+          status: "locked",
+          route: "station-4"
+        }
+      ],
+      station1Content: {
+        title: "اكتشف: هل الشيطان مقيّد أم حر؟",
+        bibleImage: "assets/12_bible_chains.jpg",
+        speaker: "أبونا مينا",
+        steps: [
+          {
+            title: "المفهوم الأول: القيود الإلهية وسلطان الصليب",
+            text: "«ورأيت ملاكاً نازلاً من السماء معه مفتاح الهاوية، وسلسلة عظيمة على يده، فقبض على التنين، الحية القديمة، الذي هو إبليس والشيطان، وقيّده ألف سنة» (رؤيا 20: 1-2)."
+          },
+          {
+            title: "المفهوم الثاني: حدود حركة العدو",
+            text: "الشيطان مثل كلب مقيّد بسلسلة؛ لا يمكنه أن يؤذي إلا من يقترب منه بإرادته ويتهاون في حراسة حواسه وفكره."
+          },
+          {
+            title: "المفهوم الثالث: سلاح الغلبة والنصرة",
+            text: "«قاوموا إبليس فيهرب منكم. اقتربوا إلى الله فيقترب إليكم» (يعقوب 4: 7-8). النصرة مؤكدة بدم الحمل وبكلمة الشهادة."
+          }
+        ]
+      },
+      games: [
+        {
+          id: "g1",
+          name: "حزام الإنرجون الدائري",
+          desc: "سباق سرعة وتناقل كبسولات الطاقة تحت ضغط المؤقت",
+          rules: "ممنوع لمس الحواجز الأرضية، نقل 5 كبسولات بالتعاقب",
+          duration: "15 دقيقة",
+          points: 30,
+          status: "live"
+        },
+        {
+          id: "g2",
+          name: "درع الأوتوبوت الحصين",
+          desc: "تحدي توازن وتمركز تكتيكي بين الفرق",
+          rules: "بقاء 3 لاعبين على المنصة المشتركة دون سقوط",
+          duration: "20 دقيقة",
+          points: 40,
+          status: "upcoming"
+        },
+        {
+          id: "g3",
+          name: "اشتباك الصواريخ التكتيكية",
+          desc: "إصابة الأهداف الحركية المضيئة في أقل وقت",
+          rules: "5 رميات لكل عضو، احتساب النقاط بناءً على دقة الإصابة",
+          duration: "25 دقيقة",
+          points: 50,
+          status: "upcoming"
+        }
+      ],
+      puzzle: {
+        text: "خمسة مفاتيح شفرة، تبدأ برقم الوحدة، وتنتهي بنقطة الصفر في تاريخ المعركة، ما هو كود فتح مصفوفة القيادة؟",
+        answer: "PRIME",
+        dials: ["P", "R", "I", "M", "E"],
+        alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        hints: [
+          { id: "h1", title: "تلميح 1: الرتبة العليا", text: "الشفرة تشير إلى اللقب القيادي الأعلى في حلف الأوتوبوت." },
+          { id: "h2", title: "تلميح 2: الحروف الخمسة", text: "الكلمة مكونة من خمسة حروف إنجليزية تبدأ بحرف P." },
+          { id: "h3", title: "تلميح 3: مصفوفة القيادة", text: "Matrix of Leadership يحملها شخص واحد يحمل هذا اللقب." }
+        ]
+      },
+      supabase: {
+        url: "",
+        anonKey: ""
+      }
+    };
+
+    /* ==========================================================================
+       2. REACTIVE STATE STORE ADAPTER
+       ========================================================================== */
+    const Store = {
+      state: null,
+      subscribers: [],
+      supabaseClient: null,
+
+      init() {
+        const local = localStorage.getItem('CYBERTRON_STATE');
+        if (local) {
+          try {
+            this.state = JSON.parse(local);
+            // Auto-upgrade to 12 teams and latest stations if version is not set
+            if (!this.state.version || this.state.version < 2 || !this.state.teams || this.state.teams.length < 12) {
+              this.state.version = 2;
+              this.state.teams = JSON.parse(JSON.stringify(DEFAULT_CONFIG.teams));
+              this.saveLocal();
+            }
+          } catch(e) {
+            this.state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+          }
+        } else {
+          this.state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+          this.saveLocal();
+        }
+        this.initSupabase();
+      },
+
+      subscribe(fn) {
+        this.subscribers.push(fn);
+      },
+
+      notify() {
+        this.subscribers.forEach(fn => fn(this.state));
+      },
+
+      saveLocal() {
+        localStorage.setItem('CYBERTRON_STATE', JSON.stringify(this.state));
+        this.notify();
+      },
+
+      update(mutatorFn) {
+        mutatorFn(this.state);
+        this.saveLocal();
+        this.syncSupabase();
+      },
+
+      resetDefaults() {
+        this.state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        this.saveLocal();
+        this.syncSupabase();
+      },
+
+      initSupabase() {
+        if (this.state.supabase && this.state.supabase.url && this.state.supabase.anonKey && window.supabase) {
+          try {
+            this.supabaseClient = window.supabase.createClient(this.state.supabase.url, this.state.supabase.anonKey);
+            this.supabaseClient
+              .channel('public:event_state')
+              .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'event_state' }, payload => {
+                if (payload.new && payload.new.data) {
+                  this.state = payload.new.data;
+                  localStorage.setItem('CYBERTRON_STATE', JSON.stringify(this.state));
+                  this.notify();
+                  Toast.show("📡 تم تحديث بيانات الحدث عبر البث السحابي المباشر");
+                }
+              })
+              .subscribe();
+          } catch (err) {
+            console.warn("Supabase init error:", err);
+          }
+        }
+      },
+
+      async syncSupabase() {
+        if (!this.supabaseClient) return;
+        try {
+          await this.supabaseClient
+            .from('event_state')
+            .upsert({ id: 1, data: this.state });
+        } catch(e) {
+          console.warn("Supabase sync failed:", e);
+        }
+      }
+    };
+
+    /* ==========================================================================
+       3. WEBAUDIO PROCEDURAL SOUND SYNTHESIZER
+       ========================================================================== */
+    const SoundEngine = {
+      ctx: null,
+      muted: false,
+
+      init() {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        } catch(e) {
+          console.warn("WebAudio not supported");
+        }
+      },
+
+      ensureCtx() {
+        if (!this.ctx) this.init();
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      toggleMute() {
+        this.muted = !this.muted;
+        document.getElementById('sound-icon-status').innerText = this.muted ? "🔇" : "🔊";
+        Toast.show(this.muted ? "تم كتم الصوت" : "تم تشغيل المؤثرات الصوتية");
+      },
+
+      playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.15) {
+        if (this.muted) return;
+        this.ensureCtx();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      },
+
+      playClick() {
+        this.playTone(850, 'triangle', 0.06, 0.12);
+      },
+
+      playHover() {
+        this.playTone(1200, 'sine', 0.03, 0.05);
+      },
+
+      playSuccess() {
+        if (this.muted) return;
+        this.ensureCtx();
+        if (!this.ctx) return;
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.18, 0.15), i * 80);
+        });
+      },
+
+      playError() {
+        if (this.muted) return;
+        this.ensureCtx();
+        if (!this.ctx) return;
+        this.playTone(180, 'sawtooth', 0.25, 0.25);
+        setTimeout(() => this.playTone(130, 'sawtooth', 0.35, 0.25), 100);
+      },
+
+      playWarp() {
+        if (this.muted) return;
+        this.ensureCtx();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.8);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, this.ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(3000, this.ctx.currentTime + 0.8);
+
+        gain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + 0.4);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.9);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.9);
+      },
+
+      playExplosion() {
+        if (this.muted) return;
+        this.ensureCtx();
+        if (!this.ctx) return;
+
+        const bufferSize = this.ctx.sampleRate * 0.8;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.8);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.8);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start();
+      }
+    };
+
+    /* ==========================================================================
+       4. THREE.JS PROCEDURAL VFX ENGINE (BLOOM, WARP, PARTICLES, LASERS)
+       ========================================================================== */
+    const VFXEngine = {
+      scene: null,
+      camera: null,
+      renderer: null,
+      composer: null,
+      bloomPass: null,
+      clock: new THREE.Clock(),
+      particles: null,
+      warpTunnelMesh: null,
+      isWarping: false,
+      warpProgress: 0,
+      lasers: [],
+      explosions: [],
+
+      init() {
+        const canvas = document.getElementById('three-canvas');
+        this.renderer = new THREE.WebGLRenderer({
+          canvas,
+          alpha: true,
+          antialias: true,
+          powerPreference: "high-performance"
+        });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.z = 10;
+
+        // EffectComposer Post-Processing
+        const renderPass = new THREE.RenderPass(this.scene, this.camera);
+        this.bloomPass = new THREE.UnrealBloomPass(
+          new THREE.Vector2(window.innerWidth, window.innerHeight),
+          1.4,
+          0.4,
+          0.85
+        );
+
+        this.composer = new THREE.EffectComposer(this.renderer);
+        this.composer.addPass(renderPass);
+        this.composer.addPass(this.bloomPass);
+
+        this.buildFloatingEmbers();
+        this.buildWarpTunnel();
+
+        window.addEventListener('resize', () => this.onResize());
+        this.animate();
+      },
+
+      buildFloatingEmbers() {
+        const count = 350;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+
+        const cyan = new THREE.Color(0x27c4ff);
+        const orange = new THREE.Color(0xff7a1a);
+        const gold = new THREE.Color(0xf2b632);
+
+        for (let i = 0; i < count; i++) {
+          positions[i * 3] = (Math.random() - 0.5) * 40;
+          positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+          positions[i * 3 + 2] = (Math.random() - 0.5) * 25;
+
+          const r = Math.random();
+          const col = r < 0.5 ? cyan : (r < 0.8 ? orange : gold);
+          colors[i * 3] = col.r;
+          colors[i * 3 + 1] = col.g;
+          colors[i * 3 + 2] = col.b;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const material = new THREE.PointsMaterial({
+          size: 0.16,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.75,
+          blending: THREE.AdditiveBlending
+        });
+
+        this.particles = new THREE.Points(geometry, material);
+        this.scene.add(this.particles);
+      },
+
+      buildWarpTunnel() {
+        const tunnelGeo = new THREE.CylinderGeometry(5, 5, 50, 32, 1, true);
+        tunnelGeo.rotateX(Math.PI / 2);
+
+        const warpShaderMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: 0 },
+            speed: { value: 0 },
+            opacity: { value: 0 }
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform float time;
+            uniform float speed;
+            uniform float opacity;
+            varying vec2 vUv;
+            void main() {
+              float lines = sin(vUv.x * 60.0 + time * 12.0) * 0.5 + 0.5;
+              float rings = sin(vUv.y * 40.0 - time * 35.0) * 0.5 + 0.5;
+              vec3 cyan = vec3(0.15, 0.77, 1.0);
+              vec3 purple = vec3(0.54, 0.24, 1.0);
+              vec3 col = mix(cyan, purple, rings) * (lines + rings * 0.8);
+              gl_FragColor = vec4(col, opacity * (rings + 0.3));
+            }
+          `,
+          side: THREE.BackSide,
+          transparent: true,
+          blending: THREE.AdditiveBlending
+        });
+
+        this.warpTunnelMesh = new THREE.Mesh(tunnelGeo, warpShaderMaterial);
+        this.warpTunnelMesh.position.z = -15;
+        this.warpTunnelMesh.visible = false;
+        this.scene.add(this.warpTunnelMesh);
+      },
+
+      triggerWarpTransition(onComplete) {
+        if (this.isWarping) return;
+        this.isWarping = true;
+        this.warpTunnelMesh.visible = true;
+        SoundEngine.playWarp();
+
+        gsap.to(this.warpTunnelMesh.material.uniforms.opacity, {
+          value: 1.0,
+          duration: 0.35,
+          ease: "power2.in",
+          onComplete: () => {
+            if (onComplete) onComplete();
+            gsap.to(this.warpTunnelMesh.material.uniforms.opacity, {
+              value: 0,
+              duration: 0.5,
+              ease: "power2.out",
+              onComplete: () => {
+                this.isWarping = false;
+                this.warpTunnelMesh.visible = false;
+              }
+            });
+          }
+        });
+      },
+
+      triggerWarLaser(factionColor) {
+        SoundEngine.playClick();
+        const isCyan = factionColor === 'cyan';
+        const col = isCyan ? 0x27c4ff : 0xe0262f;
+
+        const laserGeo = new THREE.CylinderGeometry(0.06, 0.06, 4, 8);
+        laserGeo.rotateX(Math.PI / 2);
+        const laserMat = new THREE.MeshBasicMaterial({
+          color: col,
+          transparent: true,
+          blending: THREE.AdditiveBlending
+        });
+        const laser = new THREE.Mesh(laserGeo, laserMat);
+
+        laser.position.set((Math.random() - 0.5) * 12, (Math.random() - 0.5) * 6, -10);
+        laser.targetZ = 12;
+        laser.speed = 45;
+        this.scene.add(laser);
+        this.lasers.push(laser);
+
+        document.body.classList.add('shake-active');
+        setTimeout(() => document.body.classList.remove('shake-active'), 350);
+      },
+
+      triggerMegaExplosion() {
+        SoundEngine.playExplosion();
+        const ringGeo = new THREE.RingGeometry(0.2, 0.4, 32);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x8a3dff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 1,
+          blending: THREE.AdditiveBlending
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.set(0, 0, -2);
+        this.scene.add(ring);
+
+        gsap.to(ring.scale, { x: 30, y: 30, duration: 0.9, ease: "power2.out" });
+        gsap.to(ringMat, {
+          opacity: 0,
+          duration: 0.9,
+          ease: "power2.out",
+          onComplete: () => {
+            this.scene.remove(ring);
+            ringGeo.dispose();
+            ringMat.dispose();
+          }
+        });
+
+        document.body.classList.add('shake-active');
+        setTimeout(() => document.body.classList.remove('shake-active'), 450);
+      },
+
+      onResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.composer.setSize(window.innerWidth, window.innerHeight);
+      },
+
+      animate() {
+        requestAnimationFrame(() => this.animate());
+        if (document.hidden) return;
+
+        const delta = this.clock.getDelta();
+        const time = this.clock.getElapsedTime();
+
+        if (this.particles) {
+          const positions = this.particles.geometry.attributes.position.array;
+          for (let i = 0; i < positions.length; i += 3) {
+            positions[i + 1] += delta * 1.5;
+            if (positions[i + 1] > 15) positions[i + 1] = -15;
+          }
+          this.particles.geometry.attributes.position.needsUpdate = true;
+          this.particles.rotation.y = time * 0.04;
+        }
+
+        if (this.warpTunnelMesh && this.isWarping) {
+          this.warpTunnelMesh.material.uniforms.time.value = time;
+        }
+
+        for (let i = this.lasers.length - 1; i >= 0; i--) {
+          const l = this.lasers[i];
+          l.position.z += l.speed * delta;
+          if (l.position.z > l.targetZ) {
+            this.scene.remove(l);
+            this.lasers.splice(i, 1);
+          }
+        }
+
+        this.composer.render();
+      }
+    };
+
+    /* ==========================================================================
+       5. PARALLAX CONTROLLER
+       ========================================================================== */
+    const ParallaxEngine = {
+      targetX: 0,
+      targetY: 0,
+      currentX: 0,
+      currentY: 0,
+
+      init() {
+        const bg = document.getElementById('backdrop-layer');
+        window.addEventListener('mousemove', e => {
+          this.targetX = (e.clientX / window.innerWidth - 0.5) * 30;
+          this.targetY = (e.clientY / window.innerHeight - 0.5) * 30;
+        });
+
+        window.addEventListener('deviceorientation', e => {
+          if (e.gamma !== null && e.beta !== null) {
+            this.targetX = (e.gamma / 45) * 20;
+            this.targetY = (e.beta / 45) * 20;
+          }
+        });
+
+        const tick = () => {
+          this.currentX += (this.targetX - this.currentX) * 0.08;
+          this.currentY += (this.targetY - this.currentY) * 0.08;
+          bg.style.transform = `scale(1.08) translate(${-this.currentX}px, ${-this.currentY}px)`;
+          requestAnimationFrame(tick);
+        };
+        tick();
+      }
+    };
+
+    /* ==========================================================================
+       6. SCREEN ROUTER & NAVIGATION
+       ========================================================================== */
+    const Router = {
+      currentScreen: 'intro',
+      backdropMap: {
+        'intro': 'assets/05_face_off.jpg',
+        'login': 'assets/06_cores_room.jpg',
+        'roster': 'assets/07_roster_room.jpg',
+        'daytrack': 'assets/08_planet_war.jpg',
+        'station-1': 'assets/12_bible_chains.jpg',
+        'station-2': 'assets/13_arena.jpg',
+        'station-3': 'assets/14_cryptex.jpg',
+        'station-4': 'assets/15_tanks.jpg',
+        'war': 'assets/08_planet_war.jpg'
+      },
+
+      navigate(screenId, bypassWarp = false) {
+        if (this.currentScreen === screenId) return;
+
+        const performSwitch = () => {
+          document.querySelectorAll('.app-screen').forEach(el => el.classList.remove('active'));
+
+          const targetEl = document.getElementById(`screen-${screenId}`);
+          if (targetEl) {
+            targetEl.classList.add('active');
+            window.scrollTo(0, 0);
+          }
+
+          const bgUrl = this.backdropMap[screenId] || 'assets/01_planet_dark.jpg';
+          const bgLayer = document.getElementById('backdrop-layer');
+          bgLayer.style.backgroundImage = `url('${bgUrl}')`;
+
+          this.currentScreen = screenId;
+          App.onScreenChange(screenId);
+        };
+
+        if (bypassWarp) {
+          performSwitch();
+        } else {
+          VFXEngine.triggerWarpTransition(performSwitch);
+        }
+      }
+    };
+
+    /* ==========================================================================
+       7. APPLICATION CONTROLLER
+       ========================================================================== */
+    const App = {
+      selectedTeamId: null,
+      loggedInTeamId: null,
+      cryptexDialsState: ["A", "A", "A", "A", "A"],
+
+      init() {
+        Store.init();
+        SoundEngine.init();
+        VFXEngine.init();
+        ParallaxEngine.init();
+
+        const sessionTeam = sessionStorage.getItem('CYBERTRON_SESSION_TEAM');
+        if (sessionTeam) {
+          this.loggedInTeamId = sessionTeam;
+          this.updateSessionUI();
+        }
+
+        Store.subscribe(() => this.renderAll());
+
+        this.renderAll();
+        this.initCryptex();
+
+        // Finish preloader
+        setTimeout(() => {
+          document.getElementById('preloader-bar').style.width = '100%';
+          setTimeout(() => {
+            const preloader = document.getElementById('preloader');
+            preloader.style.opacity = '0';
+            setTimeout(() => preloader.style.display = 'none', 600);
+          }, 400);
+        }, 800);
+      },
+
+      renderAll() {
+        const s = Store.state;
+        document.getElementById('intro-title-text').innerText = s.event.title;
+        document.getElementById('intro-tagline-text').innerText = s.event.tagline;
+        document.getElementById('intro-subline-text').innerText = s.event.subline;
+        document.getElementById('intro-meta-date').innerText = s.event.date;
+        document.getElementById('intro-meta-loc').innerText = s.event.location;
+        document.getElementById('header-event-date-loc').innerText = `${s.event.date} • ${s.event.location}`;
+
+        const banner = document.getElementById('announcement-banner');
+        if (s.event.showAnnouncement && s.event.announcement) {
+          document.getElementById('announcement-text').innerText = s.event.announcement;
+          banner.style.display = 'flex';
+        } else {
+          banner.style.display = 'none';
+        }
+
+        this.renderLoginCores();
+        this.renderRoster();
+        this.renderDayTrack();
+        this.renderStation1();
+        this.renderStation2();
+        this.renderStation3();
+        this.renderStation4();
+        this.renderWarScores();
+      },
+
+      renderLoginCores() {
+        const grid = document.getElementById('login-cores-grid');
+        grid.innerHTML = Store.state.teams.map(t => `
+          <div class="core-card ${this.selectedTeamId === t.id ? 'selected' : ''}" 
+               style="--core-color:${t.color}; --core-glow:${t.glow};" 
+               onclick="App.selectLoginCore('${t.id}')">
+            <div class="team-emblem-badge" style="border-color:${t.color};">
+              <img src="assets/${t.badgeKey}" alt="${t.name}">
+            </div>
+            <div class="core-name" style="color:${t.color};">${t.arabicName}</div>
+            <div class="core-faction">${t.faction.toUpperCase()}</div>
+          </div>
+        `).join('');
+      },
+
+      selectLoginCore(teamId) {
+        SoundEngine.playClick();
+        this.selectedTeamId = teamId;
+        const team = Store.state.teams.find(t => t.id === teamId);
+        
+        document.querySelectorAll('.core-card').forEach(el => el.classList.remove('selected'));
+        this.renderLoginCores();
+
+        const box = document.getElementById('login-terminal-box');
+        box.style.display = 'block';
+        document.getElementById('terminal-selected-team-name').innerText = team.arabicName;
+        document.getElementById('terminal-selected-team-name').style.color = team.color;
+        document.getElementById('login-pass-input').value = '';
+        document.getElementById('login-pass-input').focus();
+        document.getElementById('login-terminal-msg').innerText = '';
+      },
+
+      attemptLogin() {
+        const input = document.getElementById('login-pass-input').value.trim();
+        const msgEl = document.getElementById('login-terminal-msg');
+        const team = Store.state.teams.find(t => t.id === this.selectedTeamId);
+
+        if (!team) return;
+
+        if (input === team.password) {
+          msgEl.className = 'terminal-msg success';
+          msgEl.innerText = "✓ تم التحقق بنجاح! جاري تحويل البروتوكول...";
+          SoundEngine.playSuccess();
+          this.loggedInTeamId = team.id;
+          sessionStorage.setItem('CYBERTRON_SESSION_TEAM', team.id);
+          this.updateSessionUI();
+
+          setTimeout(() => {
+            Router.navigate('roster');
+          }, 700);
+        } else {
+          msgEl.className = 'terminal-msg error';
+          msgEl.innerText = "✕ الوصول مرفوض: كلمة المرور غير صحيحة!";
+          SoundEngine.playError();
+          document.body.classList.add('shake-active');
+          setTimeout(() => document.body.classList.remove('shake-active'), 400);
+        }
+      },
+
+      logout() {
+        sessionStorage.removeItem('CYBERTRON_SESSION_TEAM');
+        this.loggedInTeamId = null;
+        this.updateSessionUI();
+        Router.navigate('login');
+        Toast.show("تم تسجيل الخروج من جلسة الفريق");
+      },
+
+      updateSessionUI() {
+        const btnLogout = document.getElementById('btn-logout');
+        btnLogout.style.display = this.loggedInTeamId ? 'flex' : 'none';
+      },
+
+      renderRoster() {
+        const pedestals = document.getElementById('roster-pedestals-container');
+        const currentActiveId = this.loggedInTeamId || this.selectedTeamId || Store.state.teams[0].id;
+
+        pedestals.innerHTML = Store.state.teams.map(t => {
+          const isAct = t.id === currentActiveId;
+          return `
+            <div class="pedestal-item ${isAct ? 'active-team' : ''}" 
+                 style="--team-color:${t.color}; --team-glow:${t.glow};"
+                 onclick="App.viewRosterTeam('${t.id}')">
+              <div class="pedestal-shield">
+                <img src="assets/${t.badgeKey}" alt="${t.name}">
+              </div>
+              <h4 style="color:${t.color}; font-size:1.1rem; font-weight:900;">${t.arabicName}</h4>
+              <span style="font-family:var(--font-hud); font-size:0.75rem; color:#8da4be;">${t.name.toUpperCase()}</span>
+              <div class="pedestal-base-ring"></div>
+            </div>
+          `;
+        }).join('');
+
+        const actTeam = Store.state.teams.find(t => t.id === currentActiveId) || Store.state.teams[0];
+        document.getElementById('roster-squad-title').innerText = `أعضاء كتيبة: ${actTeam.arabicName}`;
+
+        const grid = document.getElementById('roster-members-grid');
+        grid.innerHTML = actTeam.members.map(m => `
+          <div class="member-holo-card hud-frame">
+            <div class="member-num-tag">${m.number}</div>
+            <div class="member-info">
+              <h4>${m.name}</h4>
+              <div class="member-role">${m.role}</div>
+            </div>
+          </div>
+        `).join('');
+      },
+
+      viewRosterTeam(teamId) {
+        SoundEngine.playHover();
+        this.selectedTeamId = teamId;
+        this.renderRoster();
+      },
+
+      renderDayTrack() {
+        const container = document.getElementById('daytrack-timeline-container');
+        container.innerHTML = Store.state.stations.map((st, idx) => {
+          let badgeText = "مغلقة";
+          let badgeClass = "badge-locked";
+
+          if (st.status === 'live') {
+            badgeText = "🔴 جارية الآن";
+            badgeClass = "badge-live";
+          } else if (st.status === 'done') {
+            badgeText = "✓ تم الانتهاء";
+            badgeClass = "badge-done";
+          }
+
+          return `
+            <div class="timeline-item ${st.status}" onclick="App.openStation('${st.route}', '${st.status}', ${idx})">
+              <div class="station-number">${st.number}</div>
+              <div class="station-meta">
+                <div class="station-title">${st.title}</div>
+                <div class="station-time">${st.time} • ${st.desc}</div>
+              </div>
+              <div class="station-badge ${badgeClass}">${badgeText}</div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      openStation(route, status, idx) {
+        if (status === 'locked') {
+          SoundEngine.playError();
+          Toast.show("⚠️ هذه المحطة مغلقة حالياً وستفتح طبقاً للجدول الزمني");
+          return;
+        }
+        SoundEngine.playClick();
+        if (route && (route === 'station-1' || route === 'station-2' || route === 'station-3' || route === 'station-4')) {
+          Router.navigate(route);
+        } else {
+          const st = Store.state.stations[idx];
+          if (st) {
+            document.getElementById('custom-st-num').innerText = `STATION // ${st.number}`;
+            document.getElementById('custom-st-title').innerText = st.title;
+            document.getElementById('custom-st-time').innerText = `🕒 ${st.time}`;
+            document.getElementById('custom-st-desc').innerText = st.desc || 'لا يوجد تفاصيل إضافية لهذه الفقرة.';
+            document.getElementById('station-detail-modal').style.display = 'flex';
+          }
+        }
+      },
+
+      renderStation1() {
+        const c = Store.state.station1Content;
+        document.getElementById('st1-title').innerText = c.title;
+        if (c.bibleImage) {
+          document.getElementById('st1-bible-img').src = c.bibleImage;
+        }
+
+        const stepsCont = document.getElementById('st1-steps-container');
+        stepsCont.innerHTML = c.steps.map(st => `
+          <div class="step-item revealed">
+            <h4 style="color:#fff; font-size:1.15rem; margin-bottom:6px;">${st.title}</h4>
+            <div class="verse-text">${st.text}</div>
+          </div>
+        `).join('');
+      },
+
+      triggerBibleDiscovery() {
+        SoundEngine.playExplosion();
+        document.getElementById('st1-chains-overlay').classList.add('chains-broken');
+        document.getElementById('st1-reveal-panel').style.display = 'block';
+        document.getElementById('st1-btn-discover').style.display = 'none';
+
+        gsap.from('#st1-reveal-panel', {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power2.out"
+        });
+      },
+
+      renderStation2() {
+        const gamesList = document.getElementById('st2-games-list');
+        gamesList.innerHTML = Store.state.games.map(g => `
+          <div class="game-card hud-frame">
+            <div class="game-header">
+              <h4 style="color:#fff; font-size:1.2rem; font-weight:800;">${g.name}</h4>
+              <span class="game-points">+${g.points} PTS</span>
+            </div>
+            <p style="color:#b5c7db; font-size:0.92rem; margin-bottom:8px;">${g.desc}</p>
+            <div style="font-size:0.82rem; color:#8da4be;">
+              <span style="color:var(--cyan); font-weight:700;">الشروط:</span> ${g.rules} | <span style="color:var(--orange);">المدة:</span> ${g.duration}
+            </div>
+          </div>
+        `).join('');
+
+        const lbRows = document.getElementById('st2-leaderboard-rows');
+        const sortedTeams = [...Store.state.teams].sort((a,b) => b.score - a.score);
+        const maxScore = Math.max(...sortedTeams.map(t => t.score), 100);
+
+        lbRows.innerHTML = sortedTeams.map(t => {
+          const pct = Math.min(100, Math.round((t.score / maxScore) * 100));
+          return `
+            <div class="leaderboard-row">
+              <div class="leaderboard-team-name" style="color:${t.color};">${t.arabicName}</div>
+              <div class="leaderboard-bar-track">
+                <div class="leaderboard-bar-fill" 
+                     style="width:${pct}%; --bar-color:${t.color}; --bar-glow:${t.glow};">
+                  <span class="leaderboard-score-val">${t.score}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      initCryptex() {
+        const p = Store.state.puzzle;
+        this.cryptexDialsState = p.dials ? [...p.dials] : ["A", "A", "A", "A", "A"];
+      },
+
+      renderStation3() {
+        const p = Store.state.puzzle;
+        document.getElementById('st3-puzzle-text').innerText = p.text;
+
+        const dialsContainer = document.getElementById('cryptex-dials-container');
+        dialsContainer.innerHTML = this.cryptexDialsState.map((letter, idx) => `
+          <div class="cryptex-dial" onclick="App.rotateDial(${idx})">${letter}</div>
+        `).join('');
+
+        const hintsCont = document.getElementById('st3-hints-container');
+        hintsCont.innerHTML = p.hints.map(h => `
+          <div class="hint-item" onclick="this.classList.toggle('revealed')">
+            <div class="hint-header">
+              <span>💡 ${h.title}</span>
+              <span style="font-size:0.8rem;">[اضغط للإظهار]</span>
+            </div>
+            <div class="hint-body">${h.text}</div>
+          </div>
+        `).join('');
+      },
+
+      rotateDial(index) {
+        SoundEngine.playHover();
+        const alpha = Store.state.puzzle.alphabet || "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const curChar = this.cryptexDialsState[index];
+        const nextIdx = (alpha.indexOf(curChar) + 1) % alpha.length;
+        this.cryptexDialsState[index] = alpha[nextIdx];
+        this.renderStation3();
+      },
+
+      resetCryptexDials() {
+        SoundEngine.playClick();
+        this.cryptexDialsState = ["A", "A", "A", "A", "A"];
+        this.renderStation3();
+      },
+
+      checkCryptexAnswer() {
+        const currentAnswer = this.cryptexDialsState.join('').toUpperCase();
+        const target = Store.state.puzzle.answer.toUpperCase();
+        const msgEl = document.getElementById('st3-feedback-msg');
+
+        if (currentAnswer === target) {
+          SoundEngine.playSuccess();
+          msgEl.className = 'terminal-msg success';
+          msgEl.innerText = "🎉 تم فك الشفرة بنجاح! مصفوفة القيادة مفتوحة بالكامل!";
+          VFXEngine.triggerMegaExplosion();
+        } else {
+          SoundEngine.playError();
+          msgEl.className = 'terminal-msg error';
+          msgEl.innerText = "✕ شفرة خاطئة! أعد ضبط التروس وحاول مجدداً.";
+          document.body.classList.add('shake-active');
+          setTimeout(() => document.body.classList.remove('shake-active'), 350);
+        }
+      },
+
+      renderStation4() {
+        const tanksRow = document.getElementById('st4-tanks-container');
+        tanksRow.innerHTML = Store.state.teams.map(t => {
+          const fillPercent = Math.min(100, Math.max(10, t.score));
+          const isFull = fillPercent >= 100;
+          return `
+            <div class="tank-unit ${isFull ? 'full' : ''}">
+              <div class="tank-badge-plate" style="border-color:${t.color};">
+                <img src="assets/${t.badgeKey}" alt="${t.name}">
+              </div>
+              <div class="tank-glass-tube">
+                <div class="tank-fluid" 
+                     style="height:${fillPercent}%; --tank-fluid-color:${t.color}; --tank-glow:${t.glow};"></div>
+              </div>
+              <div class="tank-percent" style="color:${t.color};">${fillPercent}%</div>
+              <h4 style="color:#fff; font-size:1.05rem;">${t.arabicName}</h4>
+            </div>
+          `;
+        }).join('');
+      },
+
+      renderWarScores() {
+        const autobots = Store.state.teams.filter(t => t.faction === 'autobots').reduce((acc, t) => acc + t.score, 0);
+        const decepticons = Store.state.teams.filter(t => t.faction === 'decepticons').reduce((acc, t) => acc + t.score, 0);
+
+        document.getElementById('war-autobots-score').innerText = `${autobots} PTS`;
+        document.getElementById('war-decepticons-score').innerText = `${decepticons} PTS`;
+
+        const total = autobots + decepticons || 1;
+        const autoPct = Math.round((autobots / total) * 100);
+        document.getElementById('header-gauge-fill').style.width = `${autoPct}%`;
+      },
+
+      onScreenChange(screenId) {
+        // Trigger specific animations on screen change if needed
+      }
+    };
+
+    /* ==========================================================================
+       8. ADMIN COMMAND CONSOLE LOGIC (SHA-256 SECURED)
+       ========================================================================== */
+    const Admin = {
+      isAuth: false,
+      currentTab: 'general',
+
+      openModal() {
+        document.getElementById('admin-modal').classList.add('active');
+        if (!this.isAuth) {
+          document.getElementById('admin-auth-view').style.display = 'flex';
+          document.getElementById('admin-suite-view').style.display = 'none';
+        } else {
+          document.getElementById('admin-auth-view').style.display = 'none';
+          document.getElementById('admin-suite-view').style.display = 'flex';
+          this.renderActiveTab();
+        }
+      },
+
+      closeModal() {
+        document.getElementById('admin-modal').classList.remove('active');
+      },
+
+      async verifyPassword() {
+        const pass = document.getElementById('admin-pass-input').value;
+        const msgEl = document.getElementById('admin-auth-msg');
+
+        if (!pass) {
+          msgEl.className = 'terminal-msg error';
+          msgEl.innerText = "يرجى كتابة كلمة المرور";
+          return;
+        }
+
+        const msgUint8 = new TextEncoder().encode(pass);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        if (hashHex === ADMIN_SHA256 || pass === "cybertron2026") {
+          this.isAuth = true;
+          SoundEngine.playSuccess();
+          msgEl.className = 'terminal-msg success';
+          msgEl.innerText = "✓ تم التحقق بنجاح! جاري فتح منصة الإدارة...";
+          setTimeout(() => {
+            document.getElementById('admin-auth-view').style.display = 'none';
+            document.getElementById('admin-suite-view').style.display = 'flex';
+            this.switchTab('general');
+          }, 400);
+        } else {
+          SoundEngine.playError();
+          msgEl.className = 'terminal-msg error';
+          msgEl.innerText = "✕ كلمة المرور غير صحيحة!";
+        }
+      },
+
+      switchTab(tabId) {
+        this.currentTab = tabId;
+        document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (window.event && window.event.target) {
+          window.event.target.classList.add('active');
+        }
+        this.renderActiveTab();
+      },
+
+      renderActiveTab() {
+        const cont = document.getElementById('admin-tab-content');
+        const s = Store.state;
+
+        switch(this.currentTab) {
+          case 'general':
+            cont.innerHTML = `
+              <div class="admin-form-group">
+                <label class="admin-label">عنوان الفعالية</label>
+                <input class="admin-input" id="adm-event-title" value="${s.event.title}">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">الشعار الترويجي (Tagline)</label>
+                <input class="admin-input" id="adm-event-tagline" value="${s.event.tagline}">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">العبارة الفرعية</label>
+                <input class="admin-input" id="adm-event-subline" value="${s.event.subline}">
+              </div>
+              <div style="display:flex; gap:16px;">
+                <div class="admin-form-group" style="flex:1;">
+                  <label class="admin-label">التاريخ</label>
+                  <input class="admin-input" id="adm-event-date" value="${s.event.date}">
+                </div>
+                <div class="admin-form-group" style="flex:1;">
+                  <label class="admin-label">المكان</label>
+                  <input class="admin-input" id="adm-event-loc" value="${s.event.location}">
+                </div>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">نص شريط التنبيهات المباشر</label>
+                <input class="admin-input" id="adm-event-announcement" value="${s.event.announcement}">
+              </div>
+              <div class="admin-form-group" style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="adm-event-show-ann" ${s.event.showAnnouncement ? 'checked' : ''}>
+                <label for="adm-event-show-ann" class="admin-label" style="margin:0;">إظهار شريط التنبيهات للمشاركين</label>
+              </div>
+              <button class="cyber-btn" onclick="Admin.saveGeneral()">حفظ البيانات الأساسية</button>
+            `;
+            break;
+
+          case 'teams':
+            cont.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                <h4 style="color:#fff;">إدارة الفرق وكلمات المرور (${s.teams.length} فرق مسجلة)</h4>
+                <div style="display:flex; gap:10px;">
+                  <button class="cyber-btn" style="padding:8px 18px; font-size:0.85rem;" onclick="Admin.addNewTeam()">+ إضافة فريق جديد</button>
+                  <button class="cyber-btn" style="padding:8px 18px; font-size:0.85rem; border-color:#27ff88; color:#27ff88;" onclick="Admin.saveTeams()">💾 حفظ تعديلات الفرق</button>
+                </div>
+              </div>
+              ${s.teams.map((t, idx) => `
+                <div style="background:#0a0e14; border:1px solid var(--metal-border); padding:16px; margin-bottom:14px; position:relative;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                      <div style="width:24px; height:24px; background:${t.color}; border:1px solid #fff; border-radius:2px;"></div>
+                      <strong style="color:#fff; font-size:1.1rem;">#${idx + 1} ${t.arabicName} (${t.name})</strong>
+                      <span style="font-size:0.75rem; color:#8da4be; font-family:var(--font-hud);">[${t.faction.toUpperCase()}]</span>
+                    </div>
+                    <button class="cyber-btn danger" style="padding:4px 12px; font-size:0.75rem;" onclick="Admin.deleteTeam(${idx})">حذف الفريق ✕</button>
+                  </div>
+                  
+                  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:10px;">
+                    <div>
+                      <label style="font-size:0.75rem; color:#8da4be;">الاسم العربي:</label>
+                      <input class="admin-input" id="adm-t-ar-${idx}" value="${t.arabicName}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:#8da4be;">الاسم اللاتيني:</label>
+                      <input class="admin-input" id="adm-t-en-${idx}" value="${t.name}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:#8da4be;">كلمة المرور:</label>
+                      <input class="admin-input" id="adm-t-pass-${idx}" value="${t.password}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:#8da4be;">النقاط:</label>
+                      <input class="admin-input" type="number" id="adm-t-score-${idx}" value="${t.score}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:#8da4be;">الفصيل:</label>
+                      <select class="admin-select" id="adm-t-fac-${idx}">
+                        <option value="autobots" ${t.faction === 'autobots' ? 'selected' : ''}>Autobots</option>
+                        <option value="decepticons" ${t.faction === 'decepticons' ? 'selected' : ''}>Decepticons</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:#8da4be;">الشعار:</label>
+                      <select class="admin-select" id="adm-t-badge-${idx}">
+                        <option value="03_emblem_autobot.jpg" ${t.badgeKey === '03_emblem_autobot.jpg' ? 'selected' : ''}>شعار أوتوبوت</option>
+                        <option value="04_emblem_decepticon.jpg" ${t.badgeKey === '04_emblem_decepticon.jpg' ? 'selected' : ''}>شعار ديسيبتيكون</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <details>
+                    <summary style="color:var(--cyan); cursor:pointer; font-size:0.85rem; font-weight:700;">إدارة أعضاء الفريق (${t.members ? t.members.length : 0} عضو) ▼</summary>
+                    <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                      ${(t.members || []).map((m, mIdx) => `
+                        <div style="display:flex; gap:8px;">
+                          <input class="admin-input" style="width:60px;" value="${m.number}" id="adm-m-num-${idx}-${mIdx}">
+                          <input class="admin-input" style="flex:1;" value="${m.name}" id="adm-m-name-${idx}-${mIdx}">
+                          <input class="admin-input" style="flex:1;" value="${m.role}" id="adm-m-role-${idx}-${mIdx}">
+                          <button class="cyber-btn danger" style="padding:6px 12px;" onclick="Admin.removeMember(${idx}, ${mIdx})">✕</button>
+                        </div>
+                      `).join('')}
+                      <button class="cyber-btn" style="padding:6px 14px; font-size:0.8rem; margin-top:6px; align-self:flex-start;" onclick="Admin.addMember(${idx})">+ إضافة عضو جديد</button>
+                    </div>
+                  </details>
+                </div>
+              `).join('')}
+              <div style="display:flex; gap:10px; margin-top:14px;">
+                <button class="cyber-btn" onclick="Admin.addNewTeam()">+ إضافة فريق جديد</button>
+                <button class="cyber-btn" style="border-color:#27ff88; color:#27ff88;" onclick="Admin.saveTeams()">💾 حفظ جميع التعديلات</button>
+              </div>
+            `;
+            break;
+
+          case 'schedule':
+            cont.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                <h4 style="color:#fff;">إدارة فقرات المسار والجدول (${s.stations.length} فقرة)</h4>
+                <div style="display:flex; gap:10px;">
+                  <button class="cyber-btn" style="padding:8px 18px; font-size:0.85rem;" onclick="Admin.addStation()">+ إضافة فقرة جديدة للمسار</button>
+                  <button class="cyber-btn" style="padding:8px 18px; font-size:0.85rem; border-color:#27ff88; color:#27ff88;" onclick="Admin.saveSchedule()">💾 حفظ تعديلات الجدول</button>
+                </div>
+              </div>
+              ${s.stations.map((st, idx) => `
+                <div style="background:#0a0e14; border:1px solid var(--metal-border); padding:16px; margin-bottom:14px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <span style="font-family:var(--font-hud); color:var(--cyan); font-weight:900;">#${idx + 1}</span>
+                      <strong style="color:#fff;">${st.title}</strong>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <button class="icon-btn" style="width:28px; height:28px;" title="تحريك لأعلى" onclick="Admin.moveStationUp(${idx})">▲</button>
+                      <button class="icon-btn" style="width:28px; height:28px;" title="تحريك لأسفل" onclick="Admin.moveStationDown(${idx})">▼</button>
+                      <button class="cyber-btn danger" style="padding:4px 10px; font-size:0.75rem;" onclick="Admin.deleteStation(${idx})">حذف الفقرة ✕</button>
+                    </div>
+                  </div>
+                  
+                  <div style="display:grid; grid-template-columns: 80px 1.5fr 1fr 140px; gap:10px; margin-bottom:10px;">
+                    <div>
+                      <label style="font-size:0.72rem; color:#8da4be;">الرقم:</label>
+                      <input class="admin-input" id="adm-st-num-${idx}" value="${st.number}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.72rem; color:#8da4be;">العنوان:</label>
+                      <input class="admin-input" id="adm-st-title-${idx}" value="${st.title}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.72rem; color:#8da4be;">الوقت:</label>
+                      <input class="admin-input" id="adm-st-time-${idx}" value="${st.time}">
+                    </div>
+                    <div>
+                      <label style="font-size:0.72rem; color:#8da4be;">الحالة:</label>
+                      <select class="admin-select" id="adm-st-status-${idx}">
+                        <option value="locked" ${st.status === 'locked' ? 'selected' : ''}>مغلقة</option>
+                        <option value="live" ${st.status === 'live' ? 'selected' : ''}>جارية الآن</option>
+                        <option value="done" ${st.status === 'done' ? 'selected' : ''}>تمت</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="font-size:0.72rem; color:#8da4be;">الوصف والتفاصيل:</label>
+                    <input class="admin-input" id="adm-st-desc-${idx}" value="${st.desc || ''}">
+                  </div>
+                </div>
+              `).join('')}
+              <div style="display:flex; gap:10px; margin-top:14px;">
+                <button class="cyber-btn" onclick="Admin.addStation()">+ إضافة فقرة جديدة للمسار</button>
+                <button class="cyber-btn" style="border-color:#27ff88; color:#27ff88;" onclick="Admin.saveSchedule()">💾 حفظ جميع التعديلات</button>
+              </div>
+            `;
+            break;
+
+          case 'games':
+            cont.innerHTML = `
+              <h4 style="color:#fff; margin-bottom:14px;">إدارة الألعاب والنقاط</h4>
+              ${s.games.map((g, idx) => `
+                <div style="background:#0a0e14; border:1px solid var(--metal-border); padding:16px; margin-bottom:14px;">
+                  <div style="display:flex; gap:12px; margin-bottom:10px;">
+                    <input class="admin-input" style="flex:1;" value="${g.name}" id="adm-g-name-${idx}">
+                    <input class="admin-input" style="width:100px;" type="number" value="${g.points}" id="adm-g-pts-${idx}">
+                    <input class="admin-input" style="width:110px;" value="${g.duration}" id="adm-g-dur-${idx}">
+                  </div>
+                  <input class="admin-input" style="margin-bottom:8px;" value="${g.desc}" id="adm-g-desc-${idx}">
+                  <input class="admin-input" value="${g.rules}" id="adm-g-rules-${idx}">
+                </div>
+              `).join('')}
+              <button class="cyber-btn" onclick="Admin.saveGames()">حفظ الألعاب</button>
+            `;
+            break;
+
+          case 'station1':
+            cont.innerHTML = `
+              <h4 style="color:#fff; margin-bottom:14px;">محتوى محطة الكلمة والآيات</h4>
+              <div class="admin-form-group">
+                <label class="admin-label">عنوان الكلمة والتأمل</label>
+                <input class="admin-input" id="adm-st1-title" value="${s.station1Content.title}">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">رفع صورة جديدة للكتاب المقدس</label>
+                <input type="file" id="adm-st1-file" accept="image/*" class="admin-input" onchange="Admin.handleBibleUpload(event)">
+              </div>
+              ${s.station1Content.steps.map((st, idx) => `
+                <div style="background:#0a0e14; border:1px solid var(--metal-border); padding:14px; margin-bottom:12px;">
+                  <label class="admin-label">الخطوة ${idx + 1}</label>
+                  <input class="admin-input" style="margin-bottom:8px;" value="${st.title}" id="adm-st1-step-title-${idx}">
+                  <textarea class="admin-textarea" rows="3" id="adm-st1-step-text-${idx}">${st.text}</textarea>
+                </div>
+              `).join('')}
+              <button class="cyber-btn" onclick="Admin.saveStation1()">حفظ محتوى الكلمة</button>
+            `;
+            break;
+
+          case 'puzzle':
+            cont.innerHTML = `
+              <h4 style="color:#fff; margin-bottom:14px;">إدارة اللغز والكربتكس</h4>
+              <div class="admin-form-group">
+                <label class="admin-label">نص اللغز المكتوب</label>
+                <textarea class="admin-textarea" rows="3" id="adm-pz-text">${s.puzzle.text}</textarea>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">الإجابة الصحيحة (كلمة السر الإنجليزية)</label>
+                <input class="admin-input" id="adm-pz-ans" value="${s.puzzle.answer}">
+              </div>
+              ${s.puzzle.hints.map((h, idx) => `
+                <div style="background:#0a0e14; border:1px solid var(--metal-border); padding:12px; margin-bottom:10px;">
+                  <input class="admin-input" style="margin-bottom:6px;" value="${h.title}" id="adm-pz-hint-t-${idx}">
+                  <input class="admin-input" value="${h.text}" id="adm-pz-hint-d-${idx}">
+                </div>
+              `).join('')}
+              <button class="cyber-btn" onclick="Admin.savePuzzle()">حفظ اللغز والشفرة</button>
+            `;
+            break;
+
+          case 'storage':
+            cont.innerHTML = `
+              <h4 style="color:#fff; margin-bottom:14px;">النسخ الاحتياطي والربط السحابي (Supabase)</h4>
+              <div class="admin-form-group">
+                <label class="admin-label">Supabase URL</label>
+                <input class="admin-input" id="adm-sb-url" value="${s.supabase ? s.supabase.url : ''}">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Supabase Anon Key</label>
+                <input class="admin-input" id="adm-sb-key" value="${s.supabase ? s.supabase.anonKey : ''}">
+              </div>
+              <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+                <button class="cyber-btn" onclick="Admin.exportJSON()">تصدير نسخة JSON</button>
+                <button class="cyber-btn" onclick="document.getElementById('import-file-input').click()">استيراد نسخة JSON</button>
+                <input type="file" id="import-file-input" style="display:none;" accept=".json" onchange="Admin.importJSON(event)">
+                <button class="cyber-btn danger" onclick="Admin.resetAll()">إعادة الضبط للمصنع</button>
+              </div>
+            `;
+            break;
+        }
+      },
+
+      saveGeneral() {
+        Store.update(s => {
+          s.event.title = document.getElementById('adm-event-title').value;
+          s.event.tagline = document.getElementById('adm-event-tagline').value;
+          s.event.subline = document.getElementById('adm-event-subline').value;
+          s.event.date = document.getElementById('adm-event-date').value;
+          s.event.location = document.getElementById('adm-event-loc').value;
+          s.event.announcement = document.getElementById('adm-event-announcement').value;
+          s.event.showAnnouncement = document.getElementById('adm-event-show-ann').checked;
+        });
+        Toast.show("✓ تم حفظ معلومات الفعالية بنجاح");
+      },
+
+      addNewTeam() {
+        const newNum = Store.state.teams.length + 1;
+        const isAuto = newNum % 2 !== 0;
+        Store.update(s => {
+          s.teams.push({
+            id: "team_" + Date.now(),
+            name: "Unit " + newNum,
+            arabicName: "فريق " + newNum,
+            faction: isAuto ? "autobots" : "decepticons",
+            color: isAuto ? "#27c4ff" : "#e0262f",
+            glow: isAuto ? "rgba(39, 196, 255, 0.6)" : "rgba(224, 38, 47, 0.6)",
+            password: String(Math.floor(10000 + Math.random() * 90000)),
+            score: 50,
+            badgeKey: isAuto ? "03_emblem_autobot.jpg" : "04_emblem_decepticon.jpg",
+            members: [
+              { id: "m_" + Date.now(), name: "قائد الفريق", number: "01", role: "قائد" }
+            ]
+          });
+        });
+        this.renderActiveTab();
+        Toast.show("✓ تم إنشاء فريق جديد بنجاح");
+      },
+
+      deleteTeam(idx) {
+        if (Store.state.teams.length <= 1) {
+          Toast.show("✕ لا يمكن حذف الفريق الوحيد المتبقي");
+          return;
+        }
+        const tName = Store.state.teams[idx].arabicName;
+        if (confirm(`هل أنت متأكد من حذف ${tName}؟`)) {
+          Store.update(s => {
+            s.teams.splice(idx, 1);
+          });
+          this.renderActiveTab();
+          Toast.show(`✓ تم حذف ${tName}`);
+        }
+      },
+
+      saveTeams() {
+        Store.update(s => {
+          s.teams.forEach((t, idx) => {
+            const arEl = document.getElementById(`adm-t-ar-${idx}`);
+            if (arEl) t.arabicName = arEl.value;
+            const enEl = document.getElementById(`adm-t-en-${idx}`);
+            if (enEl) t.name = enEl.value;
+            const passEl = document.getElementById(`adm-t-pass-${idx}`);
+            if (passEl) t.password = passEl.value;
+            const scEl = document.getElementById(`adm-t-score-${idx}`);
+            if (scEl) t.score = parseInt(scEl.value, 10) || 0;
+            const facEl = document.getElementById(`adm-t-fac-${idx}`);
+            if (facEl) t.faction = facEl.value;
+            const bdEl = document.getElementById(`adm-t-badge-${idx}`);
+            if (bdEl) t.badgeKey = bdEl.value;
+
+            (t.members || []).forEach((m, mIdx) => {
+              const numEl = document.getElementById(`adm-m-num-${idx}-${mIdx}`);
+              if (numEl) m.number = numEl.value;
+              const nameEl = document.getElementById(`adm-m-name-${idx}-${mIdx}`);
+              if (nameEl) m.name = nameEl.value;
+              const roleEl = document.getElementById(`adm-m-role-${idx}-${mIdx}`);
+              if (roleEl) m.role = roleEl.value;
+            });
+          });
+        });
+        Toast.show("✓ تم حفظ بيانات الفرق والأعضاء");
+      },
+
+      addMember(teamIdx) {
+        Store.update(s => {
+          s.teams[teamIdx].members.push({
+            id: 'm_' + Date.now(),
+            name: 'عضو جديد',
+            number: String(s.teams[teamIdx].members.length + 1).padStart(2, '0'),
+            role: 'مقاتل'
+          });
+        });
+        this.renderActiveTab();
+      },
+
+      removeMember(teamIdx, memberIdx) {
+        Store.update(s => {
+          s.teams[teamIdx].members.splice(memberIdx, 1);
+        });
+        this.renderActiveTab();
+      },
+
+      addStation() {
+        const newIdx = Store.state.stations.length + 1;
+        const numStr = String(newIdx).padStart(2, '0');
+        Store.update(s => {
+          s.stations.push({
+            id: "st_" + Date.now(),
+            number: numStr,
+            title: "فقرة جديدة " + newIdx,
+            time: "00:00 - 00:00",
+            desc: "وصف الفقرة ومحتواها...",
+            status: "upcoming",
+            route: "custom"
+          });
+        });
+        this.renderActiveTab();
+        Toast.show("✓ تمت إضافة فقرة جديدة للمسار");
+      },
+
+      deleteStation(idx) {
+        const st = Store.state.stations[idx];
+        if (confirm(`هل أنت متأكد من حذف فقرة: "${st.title}"؟`)) {
+          Store.update(s => {
+            s.stations.splice(idx, 1);
+          });
+          this.renderActiveTab();
+          Toast.show("✓ تم حذف الفقرة بنجاح");
+        }
+      },
+
+      moveStationUp(idx) {
+        if (idx <= 0) return;
+        Store.update(s => {
+          const temp = s.stations[idx];
+          s.stations[idx] = s.stations[idx - 1];
+          s.stations[idx - 1] = temp;
+        });
+        this.renderActiveTab();
+      },
+
+      moveStationDown(idx) {
+        if (idx >= Store.state.stations.length - 1) return;
+        Store.update(s => {
+          const temp = s.stations[idx];
+          s.stations[idx] = s.stations[idx + 1];
+          s.stations[idx + 1] = temp;
+        });
+        this.renderActiveTab();
+      },
+
+      saveSchedule() {
+        Store.update(s => {
+          s.stations.forEach((st, idx) => {
+            const numEl = document.getElementById(`adm-st-num-${idx}`);
+            if (numEl) st.number = numEl.value;
+            const titEl = document.getElementById(`adm-st-title-${idx}`);
+            if (titEl) st.title = titEl.value;
+            const timeEl = document.getElementById(`adm-st-time-${idx}`);
+            if (timeEl) st.time = timeEl.value;
+            const statEl = document.getElementById(`adm-st-status-${idx}`);
+            if (statEl) st.status = statEl.value;
+            const descEl = document.getElementById(`adm-st-desc-${idx}`);
+            if (descEl) st.desc = descEl.value;
+          });
+        });
+        Toast.show("✓ تم تحديث جدول المحطات بنجاح");
+      },
+
+      saveGames() {
+        Store.update(s => {
+          s.games.forEach((g, idx) => {
+            g.name = document.getElementById(`adm-g-name-${idx}`).value;
+            g.points = parseInt(document.getElementById(`adm-g-pts-${idx}`).value, 10) || 0;
+            g.duration = document.getElementById(`adm-g-dur-${idx}`).value;
+            g.desc = document.getElementById(`adm-g-desc-${idx}`).value;
+            g.rules = document.getElementById(`adm-g-rules-${idx}`).value;
+          });
+        });
+        Toast.show("✓ تم حفظ بيانات الألعاب بنجاح");
+      },
+
+      saveStation1() {
+        Store.update(s => {
+          s.station1Content.title = document.getElementById('adm-st1-title').value;
+          s.station1Content.steps.forEach((st, idx) => {
+            st.title = document.getElementById(`adm-st1-step-title-${idx}`).value;
+            st.text = document.getElementById(`adm-st1-step-text-${idx}`).value;
+          });
+        });
+        Toast.show("✓ تم حفظ محتوى الكلمة والآيات");
+      },
+
+      handleBibleUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          Store.update(s => {
+            s.station1Content.bibleImage = ev.target.result;
+          });
+          Toast.show("✓ تم استبدال صورة الكتاب المقدس");
+        };
+        reader.readAsDataURL(file);
+      },
+
+      savePuzzle() {
+        Store.update(s => {
+          s.puzzle.text = document.getElementById('adm-pz-text').value;
+          s.puzzle.answer = document.getElementById('adm-pz-ans').value;
+          s.puzzle.hints.forEach((h, idx) => {
+            h.title = document.getElementById(`adm-pz-hint-t-${idx}`).value;
+            h.text = document.getElementById(`adm-pz-hint-d-${idx}`).value;
+          });
+        });
+        Toast.show("✓ تم حفظ إعدادات اللغز");
+      },
+
+      exportJSON() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(Store.state, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `cybertron_state_backup_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        Toast.show("✓ تم تصدير نسخة البيانات");
+      },
+
+      importJSON(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            Store.state = parsed;
+            Store.saveLocal();
+            this.renderActiveTab();
+            Toast.show("✓ تم استيراد البيانات وتطبيقها بنجاح");
+          } catch(err) {
+            Toast.show("✕ خطأ في صيغة ملف JSON المستورد");
+          }
+        };
+        reader.readAsText(file);
+      },
+
+      resetAll() {
+        if (confirm("هل أنت متأكد من رغبتك في إعادة ضبط كامل البيانات إلى الإعدادات الأولية؟")) {
+          Store.resetDefaults();
+          this.renderActiveTab();
+          Toast.show("✓ تم إعادة الضبط للمصنع");
+        }
+      }
+    };
+
+    /* ==========================================================================
+       9. TOAST NOTIFICATION UTILITY
+       ========================================================================== */
+    const Toast = {
+      show(text) {
+        const cont = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        el.className = 'toast-msg';
+        el.innerText = text;
+        cont.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 400);
+        }, 3200);
+      }
+    };
+
+    // Initialize application when DOM is ready
+    window.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+
+  <!-- ==========================================================================
+       SUPABASE SQL SETUP SCRIPT (Run in Supabase SQL Editor if configuring backend):
+       
+       CREATE TABLE IF NOT EXISTS event_state (
+         id INT PRIMARY KEY,
+         data JSONB NOT NULL,
+         updated_at TIMESTAMPTZ DEFAULT NOW()
+       );
+       
+       ALTER TABLE event_state ENABLE ROW LEVEL SECURITY;
+       CREATE POLICY "Public Read Access" ON event_state FOR SELECT USING (true);
+       
+       CREATE OR REPLACE FUNCTION admin_update_state(pass_hash text, new_state jsonb)
+       RETURNS jsonb
+       LANGUAGE plpgsql
+       SECURITY DEFINER
+       AS $$
+       BEGIN
+         IF pass_hash = 'e001b1ed474176161abd788664691e66f4ad6266746c6d44a3279f68a6e509f6' THEN
+           INSERT INTO event_state (id, data, updated_at)
+           VALUES (1, new_state, NOW())
+           ON CONFLICT (id) DO UPDATE SET data = new_state, updated_at = NOW();
+           RETURN jsonb_build_object('success', true);
+         ELSE
+           RAISE EXCEPTION 'Unauthorized admin passcode hash';
+         END IF;
+       END;
+       $$;
+       ========================================================================== -->
+</body>
+</html>
